@@ -1,11 +1,11 @@
 import json
 import os
 from redis import Redis
-from loguru import logger
+from datetime import datetime
+from ..config.settings import settings
+from ..logger import logger
 
-# Heroku Redis URL
-redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-redis = Redis.from_url(redis_url, decode_responses=True)
+redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
 
 
 class PositionTracker:
@@ -13,40 +13,43 @@ class PositionTracker:
     def add_position(ticker: str, action: str, price: float, reason: str):
         key = f"position:{ticker}"
         data = {
-            "action": action,  # buy_to_open or sell_to_open
-            "entry_price": price,
+            "action": action,
+            "entry_price": str(price),
             "reason": reason,
-            "timestamp": json.dumps(None, default=str),  # for sorting
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        redis.hset(key, mapping=data)
-        redis.expire(key, 60 * 60 * 24)  # 24h expiry
-        logger.success(f"POSITION OPENED → {ticker} {action} @ ${price:.2f} | {reason}")
+        redis_client.hset(key, mapping=data)
+        redis_client.expire(key, 86400)  # 24 hours
+        logger.success(f"POSITION ADDED: {ticker} {action} @ ${price:.2f} | {reason}")
 
     @staticmethod
-    def get_position(ticker: str):
+    def get_position(ticker: str) -> dict | None:
         key = f"position:{ticker}"
-        data = redis.hgetall(key)
-        return data if data else None
+        data = redis_client.hgetall(key)
+        if data:
+            data["entry_price"] = float(data["entry_price"])
+            return data
+        return None
 
     @staticmethod
     def close_position(ticker: str, exit_action: str, exit_price: float, reason: str):
         key = f"position:{ticker}"
-        old = redis.hgetall(key)
-        if old:
-            pnl = (
-                (exit_price - float(old["entry_price"]))
-                / float(old["entry_price"])
-                * 100
+        pos = redis_client.hgetall(key)
+        if pos:
+            entry_price = float(pos["entry_price"])
+            pnl_pct = (
+                ((exit_price - entry_price) / entry_price) * 100
+                if "buy_to_open" in pos["action"]
+                else ((entry_price - exit_price) / entry_price) * 100
             )
-            sign = "+" if "buy_to_open" in old["action"] else "-"
-            redis.delete(key)
+            redis_client.delete(key)
             logger.success(
-                f"POSITION CLOSED → {ticker} {exit_action} @ ${exit_price:.2f} | PnL: {sign}{pnl:.2f}% | {reason}"
+                f"POSITION CLOSED: {ticker} {exit_action} @ ${exit_price:.2f} | PnL: {pnl_pct:+.2f}% | {reason}"
             )
         else:
-            logger.warning(f"No position found to close: {ticker}")
+            logger.warning(f"No open position for {ticker}")
 
     @staticmethod
-    def get_all_open():
-        keys = redis.keys("position:*")
-        return [k.split(":")[1] for k in keys]
+    def get_open_positions() -> list[str]:
+        keys = redis_client.keys("position:*")
+        return [k.decode().split(":")[1] for k in keys]

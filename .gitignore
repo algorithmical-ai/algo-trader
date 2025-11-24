@@ -1,7 +1,16 @@
+# Python
 __pycache__/
-*.pyc
-.env
-.DS_Store
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
 venv/
-.idea/
-*.log
+.venv/
+.env
+
+# Logs
+logs/
+
+# Heroku
+.DS_Store

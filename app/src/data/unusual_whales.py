@@ -1,39 +1,31 @@
-import pandas as pd
-import numpy as np
-import talib
-from datetime import timedelta
-from app.src.utils.helpers import now_ny, NY
+import aiohttp
+from ..config.settings import settings
+from ..logger import logger
 
 
-def calculate_rvol(df_1m: pd.DataFrame) -> float:
-    today = now_ny().date()
-    today_vol = df_1m[df_1m.index.date == today]["volume"].sum()
-    avg_vol_20d = df_1m["volume"].rolling(20 * 390).mean().iloc[-1]
-    return today_vol / avg_vol_20d if avg_vol_20d > 0 else 0
+async def get_flow_signal(ticker: str, session: aiohttp.ClientSession):
+    url = "https://api.unusualwhales.com/api/v1/flowAlerts"
+    headers = {"Authorization": f"Bearer {settings.UW_API_KEY}"}
+    params = {"ticker": ticker, "limit": 5, "sort": "desc"}
 
-
-def get_opening_range(df_today: pd.DataFrame, minutes: int = 15):
-    market_open = df_today.index[0].replace(hour=9, minute=30, second=0, microsecond=0)
-    orb_end = market_open + timedelta(minutes=minutes)
-    orb_data = df_today[(df_today.index >= market_open) & (df_today.index <= orb_end)]
-    if len(orb_data) == 0:
-        return None, None
-    return orb_data["high"].max(), orb_data["low"].min()
-
-
-def calculate_vwap(df_today: pd.DataFrame):
-    return (df_today["vwap"] * df_today["volume"]).sum() / df_today["volume"].sum()
-
-
-def is_uptrend(daily_df: pd.DataFrame) -> bool:
-    close = daily_df["close"]
-    sma50 = talib.SMA(close.values, 50)
-    sma200 = talib.SMA(close.values, 200)
-    return close.iloc[-1] > sma50[-1] > sma200[-1] if len(sma200) > 0 else False
-
-
-def is_downtrend(daily_df: pd.DataFrame) -> bool:
-    close = daily_df["close"]
-    sma50 = talib.SMA(close.values, 50)
-    sma200 = talib.SMA(close.values, 200)
-    return close.iloc[-1] < sma50[-1] < sma200[-1] if len(sma200) > 0 else False
+    try:
+        async with session.get(
+            url, headers=headers, params=params, timeout=aiohttp.ClientTimeout(total=10)
+        ) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                for alert in data.get("data", []):
+                    premium = float(alert.get("total_premium", 0))
+                    sentiment = alert.get("sentiment", "").lower()
+                    if (
+                        premium >= settings.MIN_FLOW_PREMIUM
+                        and "opener" in alert.get("type", "").lower()
+                    ):
+                        if "bullish" in sentiment:
+                            return "bullish"
+                        elif "bearish" in sentiment:
+                            return "bearish"
+            return None
+    except Exception as e:
+        logger.warning(f"UW flow fetch error for {ticker}: {e}")
+        return None
