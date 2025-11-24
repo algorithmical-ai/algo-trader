@@ -1,5 +1,5 @@
 alpaca-py==3.3.1
-aiohttp==3.9.5
+aiohttp==3.12.14
 pandas==2.2.2
 numpy==1.26.4
 ta-lib==0.4.28
