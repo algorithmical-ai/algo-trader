@@ -1,0 +1,23 @@
+name: daytrader-pro
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - aiohttp
+  - pandas
+  - numpy
+  - pytz
+  - python-dotenv
+  - ta-lib=0.4.28
+  - asyncio
+  - pip:
+      - alpaca-py>=3.3.0
+      - redis>=5.0.1
+      - loguru>=0.7.0
+      - requests>=2.32.3
+      - redis>=5.0.1
+      - aiohttp>=3.11.11
+      - python-dotenv>=1.0.0
+      - pytz>=2025.1
