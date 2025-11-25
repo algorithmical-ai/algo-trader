@@ -20,11 +20,14 @@ from app.src.position_tracker.dynamodb_tracker import PositionTracker
 from app.src.utils.helpers import now_ny
 from app.src.utils.logger import logger
 
+WATCHLIST = settings.WATCHLIST.copy()
+
 
 async def refresh_watchlist(session):
     """New: Daily refresh with screener."""
-    global WATCHLIST
-    WATCHLIST = await get_screener_tickers(session)
+    tickers = await get_screener_tickers(session)
+    WATCHLIST.clear()
+    WATCHLIST.extend(tickers)
     logger.info(f"Watchlist refreshed: {len(WATCHLIST)} tickers")
 
 
@@ -44,9 +47,18 @@ def _safe_float(value) -> float:
         return 0.0
 
 
+def _log_skip(ticker: str, reason: str, **context):
+    extra = ""
+    if context:
+        kv = ", ".join(f"{k}={v}" for k, v in context.items())
+        extra = f" | {kv}"
+    logger.info(f"NO TRADE {ticker}: {reason}{extra}")
+
+
 async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
     try:
         if ticker not in df_1m.index.get_level_values(0):
+            _log_skip(ticker, "No intraday data returned")
             return
         df_1m_t = df_1m.xs(ticker, level=0)
         df_daily_t = (
@@ -54,23 +66,37 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
             if ticker in df_daily.index.get_level_values(0)
             else None
         )
-        if df_daily_t is None or df_daily_t.empty or df_daily_t.empty or len(df_daily_t) < 200:
+        if df_daily_t is None or df_daily_t.empty or len(df_daily_t) < 200:
+            _log_skip(
+                ticker,
+                "Insufficient daily history",
+                bars=len(df_daily_t) if df_daily_t is not None else 0,
+            )
             return
 
         today_df = df_1m_t[df_1m_t.index.date == now_ny().date()]
         if len(today_df) < 10:
+            _log_skip(ticker, "Not enough intraday bars for today", bars=len(today_df))
             return
 
         price = today_df["close"].iloc[-1]
         if price < settings.MIN_PRICE:
+            _log_skip(
+                ticker,
+                "Price below MIN_PRICE",
+                price=f"{price:.2f}",
+                min_price=settings.MIN_PRICE,
+            )
             return
 
         rvol = calculate_rvol(df_1m_t)
         if rvol < settings.MIN_RVOL:
+            _log_skip(ticker, "RVOL below threshold", rvol=f"{rvol:.2f}", min_rvol=settings.MIN_RVOL)
             return
 
         orb_high, orb_low = get_opening_range(today_df)
         if orb_high is None or orb_low is None:
+            _log_skip(ticker, "Opening range unavailable")
             return
 
         vwap_val = calculate_vwap(today_df)
@@ -117,15 +143,22 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                     and flow == "bullish"
                     and "bullish" in congress
                 ):
-                    reason = f"VWAP Dip + Bullish Flow + Congress + High IV"
+                    reason = "VWAP Dip + Bullish Flow + Congress + High IV"
                     PositionTracker.add_position(ticker, "buy_to_open", price, reason)
                     await send_signal(ticker, "buy_to_open", reason, price, session, indicator=settings.INDICATOR_NAME)
                     return
                 if price > vwap_val and is_downtrend(df_daily_t) and flow == "bearish":
-                    reason = f"VWAP Rally Fade + Bearish Flow"
+                    reason = "VWAP Rally Fade + Bearish Flow"
                     PositionTracker.add_position(ticker, "sell_to_open", price, reason)
                     await send_signal(ticker, "sell_to_open", reason, price, session, indicator=settings.INDICATOR_NAME)
                     return
+        elif not pos:
+            _log_skip(
+                ticker,
+                "IV rank filter failed",
+                iv_rank=f"{high_iv:.1f}",
+                required=settings.MIN_IV_RANK,
+            )
 
         # EXIT: PnL + unusual put/call flow
         if pos:
