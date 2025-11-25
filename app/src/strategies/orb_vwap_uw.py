@@ -30,7 +30,7 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
             if ticker in df_daily.index.get_level_values(0)
             else None
         )
-        if not df_daily_t or len(df_daily_t) < 200:
+        if df_daily_t is None or df_daily_t.empty or len(df_daily_t) < 200:
             return
 
         today_df = df_1m_t[df_1m_t.index.date == now_ny().date()]
