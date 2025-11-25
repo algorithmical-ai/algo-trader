@@ -51,7 +51,9 @@ async def get_congress_trades(ticker: str, session: aiohttp.ClientSession):
         # Ensure all param values are strings or compatible with aiohttp
         params_str = {k: str(v) for k, v in params.items()}
         timeout = aiohttp.ClientTimeout(total=10)
-        async with session.get(url, headers=headers, params=params_str, timeout=timeout) as resp:
+        async with session.get(
+            url, headers=headers, params=params_str, timeout=timeout
+        ) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 for trade in data.get("data", []):
@@ -76,7 +78,9 @@ async def get_dark_pool(ticker: str, session: aiohttp.ClientSession):
         # Ensure params are str values for aiohttp compatibility
         params_str = {k: str(v) for k, v in params.items()}
         timeout = aiohttp.ClientTimeout(total=10)
-        async with session.get(url, headers=headers, params=params_str, timeout=timeout) as resp:
+        async with session.get(
+            url, headers=headers, params=params_str, timeout=timeout
+        ) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 total_vol = sum(float(d.get("volume", 0)) for d in data.get("data", []))
@@ -98,7 +102,9 @@ async def get_iv_rank(ticker: str, session: aiohttp.ClientSession):
 
     try:
         timeout = aiohttp.ClientTimeout(total=10)
-        async with session.get(url, headers=headers, params=params, timeout=timeout) as resp:
+        async with session.get(
+            url, headers=headers, params=params, timeout=timeout
+        ) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 iv_str = data.get("iv_rank", "0")
@@ -125,7 +131,7 @@ async def get_screener_tickers(session: aiohttp.ClientSession):
             url,
             headers=headers,
             params={k: str(v) for k, v in params.items()},
-            timeout=timeout
+            timeout=timeout,
         ) as resp:
             if resp.status == 200:
                 data = await resp.json()

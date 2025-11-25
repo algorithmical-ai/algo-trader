@@ -1,10 +1,13 @@
 import math
 from datetime import datetime
-from typing import Optional, Dict, List
+from typing import Dict, List, Optional
+
 
 class WheelOptionsSelector:
     @staticmethod
-    def select_best_put(chain: list[dict], spot_price: float, iv_rank: float) -> Optional[dict]:
+    def select_best_put(
+        chain: list[dict], spot_price: float, iv_rank: float
+    ) -> Optional[dict]:
         if iv_rank < 70:
             return None
 
@@ -13,7 +16,10 @@ class WheelOptionsSelector:
             if c.get("option_type") != "put":
                 continue
             strike = float(c["strike_price"])
-            dte = (datetime.fromisoformat(c["expiration_date"].split("T")[0]) - datetime.now()).days
+            dte = (
+                datetime.fromisoformat(c["expiration_date"].split("T")[0])
+                - datetime.now()
+            ).days
             if not (30 <= dte <= 45):
                 continue
             delta = abs(float(c.get("delta", 0)))
@@ -26,15 +32,17 @@ class WheelOptionsSelector:
                 continue
             premium = float(c["bid"])
             score = premium * 100 + distance * 10
-            candidates.append({
-                "contract": c["symbol"],
-                "strike": strike,
-                "premium": premium,
-                "dte": dte,
-                "delta": round(delta, 3),
-                "distance_pct": round(distance * 100, 2),
-                "score": score
-            })
+            candidates.append(
+                {
+                    "contract": c["symbol"],
+                    "strike": strike,
+                    "premium": premium,
+                    "dte": dte,
+                    "delta": round(delta, 3),
+                    "distance_pct": round(distance * 100, 2),
+                    "score": score,
+                }
+            )
         return max(candidates, key=lambda x: x["score"]) if candidates else None
 
     @staticmethod
@@ -44,7 +52,10 @@ class WheelOptionsSelector:
             if c.get("option_type") != "call":
                 continue
             strike = float(c["strike_price"])
-            dte = (datetime.fromisoformat(c["expiration_date"].split("T")[0]) - datetime.now()).days
+            dte = (
+                datetime.fromisoformat(c["expiration_date"].split("T")[0])
+                - datetime.now()
+            ).days
             if not (21 <= dte <= 45):
                 continue
             delta = float(c.get("delta", 0))
@@ -54,12 +65,14 @@ class WheelOptionsSelector:
                 continue
             premium = float(c["bid"])
             score = premium * 100
-            candidates.append({
-                "contract": c["symbol"],
-                "strike": strike,
-                "premium": premium,
-                "dte": dte,
-                "delta": round(delta, 3),
-                "score": score
-            })
+            candidates.append(
+                {
+                    "contract": c["symbol"],
+                    "strike": strike,
+                    "premium": premium,
+                    "dte": dte,
+                    "delta": round(delta, 3),
+                    "score": score,
+                }
+            )
         return max(candidates, key=lambda x: x["score"]) if candidates else None

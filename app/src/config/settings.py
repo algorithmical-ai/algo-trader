@@ -16,6 +16,9 @@ class Settings:
         "https://tradingview-webhook-maverick-d375f5273444.herokuapp.com/webhook"
     )
     INDICATOR_NAME = "AlgoTrader_Elite_2025"
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+    AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 
     WATCHLIST = [
         "SPY",
@@ -99,12 +102,57 @@ class Settings:
     ]
 
     BEST_2025_WHEEL_TICKERS = [
-    "NVDA", "TSLA", "AMD", "SMCI", "ARM", "HOOD", "COIN", "MARA", "RIOT", "CLSK",
-    "UPST", "SOFI", "AFRM", "PATH", "RBLX", "DKNG", "IONQ", "RGTI", "ASTS", "SOUN",
-    "AAPL", "MSFT", "GOOGL", "AMZN", "META", "AVGO", "NFLX", "ADBE", "CRM", "ORCL",
-    "NOW", "PANW", "CRWD", "ZS", "NET", "DDOG", "MDB", "SNOW", "PLTR", "AI",
-    "GME", "AMC", "SPY", "QQQ", "IWM", "TNA", "SQQQ", "TQQQ", "XLF", "KRE"
-]
+        "NVDA",
+        "TSLA",
+        "AMD",
+        "SMCI",
+        "ARM",
+        "HOOD",
+        "COIN",
+        "MARA",
+        "RIOT",
+        "CLSK",
+        "UPST",
+        "SOFI",
+        "AFRM",
+        "PATH",
+        "RBLX",
+        "DKNG",
+        "IONQ",
+        "RGTI",
+        "ASTS",
+        "SOUN",
+        "AAPL",
+        "MSFT",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "AVGO",
+        "NFLX",
+        "ADBE",
+        "CRM",
+        "ORCL",
+        "NOW",
+        "PANW",
+        "CRWD",
+        "ZS",
+        "NET",
+        "DDOG",
+        "MDB",
+        "SNOW",
+        "PLTR",
+        "AI",
+        "GME",
+        "AMC",
+        "SPY",
+        "QQQ",
+        "IWM",
+        "TNA",
+        "SQQQ",
+        "TQQQ",
+        "XLF",
+        "KRE",
+    ]
 
     MIN_PRICE = 8.0
     MIN_RVOL = 7.0

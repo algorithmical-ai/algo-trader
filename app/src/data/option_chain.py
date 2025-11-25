@@ -8,15 +8,17 @@ from app.src.utils.logger import logger
 
 trading_client = TradingClient(settings.ALPACA_KEY, settings.ALPACA_SECRET, paper=False)
 
-async def get_option_chain(ticker: str, option_type: str = "put", days: int = 45) -> list:
+
+async def get_option_chain(
+    ticker: str, option_type: str = "put", days: int = 45
+) -> list:
     """Fetch real option chain from Alpaca for puts/calls."""
     try:
         request = GetOptionContractsRequest(
-            underlying_symbols=[ticker],
-            limit=100  # Top 100 strikes
+            underlying_symbols=[ticker], limit=100  # Top 100 strikes
         )
         contracts = trading_client.get_option_contracts(request)
-        
+
         chain = []
         for c in contracts:
             # c is likely a tuple or dict, not an object; try handling both cases.
@@ -34,7 +36,7 @@ async def get_option_chain(ticker: str, option_type: str = "put", days: int = 45
             else:
                 # Try to get expiration_date as an attribute (for object types)
                 expiration_date = getattr(c, "expiration_date", None)
-            
+
             # Now parse the expiration_date as string if needed
             if expiration_date:
                 # Convert both sides to datetime before comparing.
@@ -53,13 +55,17 @@ async def get_option_chain(ticker: str, option_type: str = "put", days: int = 45
                         strike_price = c["strike_price"]
                     elif isinstance(c, (tuple, list)) and len(c) >= 2:
                         strike_price = c[1]
-                    chain.append({
-                        "symbol": symbol,
-                        "strike_price": strike_price,
-                        "expiration_date": expiration_date,
-                        "option_type": option_type
-                    })
-        logger.info(f"Option chain for {ticker} ({option_type}): {len(chain)} contracts")
+                    chain.append(
+                        {
+                            "symbol": symbol,
+                            "strike_price": strike_price,
+                            "expiration_date": expiration_date,
+                            "option_type": option_type,
+                        }
+                    )
+        logger.info(
+            f"Option chain for {ticker} ({option_type}): {len(chain)} contracts"
+        )
         return chain
     except Exception as e:
         logger.error(f"Option chain error for {ticker}: {e}")

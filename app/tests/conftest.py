@@ -7,6 +7,10 @@ import pytz
 
 NY = pytz.timezone("America/New_York")
 
+@pytest.fixture
+def mock_boto3(mocker):
+    mocker.patch('boto3.resource')
+    return mocker
 
 @pytest.fixture
 def sample_1m_data():
