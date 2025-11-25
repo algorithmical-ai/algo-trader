@@ -1,7 +1,7 @@
 import asyncio
 
+from alpaca.data import TimeFrame
 from alpaca.trading.client import TradingClient
-from alpaca.trading.enums import TimeFrame
 
 from app.src.config.settings import settings
 from app.src.data.alpaca_client import get_bars

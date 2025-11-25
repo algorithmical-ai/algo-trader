@@ -1,5 +1,4 @@
-from alpaca.data import StockBarsRequest, StockHistoricalDataClient
-from alpaca.trading.enums import TimeFrame
+from alpaca.data import StockBarsRequest, StockHistoricalDataClient, TimeFrame
 
 from app.src.config.settings import settings
 from app.src.utils.logger import logger
