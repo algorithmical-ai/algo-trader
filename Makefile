@@ -13,12 +13,12 @@ test:
 
 lint:
 	@echo "$(YELLOW)Running pylint...$(NC)"
-	conda run -n algo-trader pylint algo_trader/ app/tests/ --score=y
+	conda run -n algo-trader pylint app/ app/tests/ --score=y
 
 format:
 	@echo "$(YELLOW)Formatting code...$(NC)"
-	conda run -n algo-trader black algo_trader/ app/tests/
-	conda run -n algo-trader isort algo_trader/ app/tests/
+	conda run -n algo-trader black app/ app/tests/
+	conda run -n algo-trader isort app/ app/tests/
 
 setup:
 	@echo "$(YELLOW)Environment already created – just run tests!$(NC)"

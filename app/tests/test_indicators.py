@@ -1,14 +1,12 @@
-from app.src.indicators.technical import (
-    calculate_rvol,
-    get_opening_range,
-    calculate_vwap,
-    is_uptrend,
-    is_downtrend,
-)
-import numpy as np
-from unittest.mock import patch
 from datetime import datetime
+from unittest.mock import patch
+
+import numpy as np
 import pytz
+
+from app.src.indicators.technical import (calculate_rvol, calculate_vwap,
+                                          get_opening_range, is_downtrend,
+                                          is_uptrend)
 
 NY = pytz.timezone("America/New_York")
 

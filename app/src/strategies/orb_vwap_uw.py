@@ -1,17 +1,14 @@
 import asyncio
 from datetime import time
-from app.src.indicators.technical import (
-    calculate_rvol,
-    get_opening_range,
-    calculate_vwap,
-    is_uptrend,
-    is_downtrend,
-)
-from app.src.data.unusual_whales import get_flow_signal
+
+from app.src.config.settings import settings
 from app.src.core.signaler import send_signal
+from app.src.data.unusual_whales import get_flow_signal
+from app.src.indicators.technical import (calculate_rvol, calculate_vwap,
+                                          get_opening_range, is_downtrend,
+                                          is_uptrend)
 from app.src.position_tracker.redis_tracker import PositionTracker
 from app.src.utils.helpers import now_ny
-from app.src.config.settings import settings
 from app.src.utils.logger import logger
 
 

@@ -1,8 +1,10 @@
 import asyncio
-from alpaca.trading.enums import TimeFrame
+
 from alpaca.trading.client import TradingClient
-from app.src.data.alpaca_client import get_bars
+from alpaca.trading.enums import TimeFrame
+
 from app.src.config.settings import settings
+from app.src.data.alpaca_client import get_bars
 from app.src.strategies.orb_vwap_uw import evaluate_ticker
 from app.src.utils.helpers import is_trading_hours
 from app.src.utils.logger import logger

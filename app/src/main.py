@@ -1,8 +1,10 @@
 import asyncio
+
 import aiohttp
+
 from app.src.core.scanner import scan_once
-from app.src.utils.logger import logger
 from app.src.utils.helpers import now_ny
+from app.src.utils.logger import logger
 
 
 async def main():

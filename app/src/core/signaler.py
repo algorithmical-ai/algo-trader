@@ -1,4 +1,5 @@
 import aiohttp
+
 from app.src.config.settings import settings
 from app.src.utils.logger import logger
 

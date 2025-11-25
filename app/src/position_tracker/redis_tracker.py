@@ -1,7 +1,9 @@
 import json
 import os
-from redis import Redis
 from datetime import datetime
+
+from redis import Redis
+
 from app.src.config.settings import settings
 from app.src.utils.logger import logger
 
