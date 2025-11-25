@@ -89,7 +89,7 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
             )
             return
 
-        rvol = calculate_rvol(df_1m_t)
+        rvol = calculate_rvol(df_1m_t, df_daily_t)
         if rvol < settings.MIN_RVOL:
             _log_skip(ticker, "RVOL below threshold", rvol=f"{rvol:.2f}", min_rvol=settings.MIN_RVOL)
             return

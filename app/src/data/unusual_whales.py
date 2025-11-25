@@ -96,23 +96,28 @@ async def get_dark_pool(ticker: str, session: aiohttp.ClientSession):
 
 async def get_iv_rank(ticker: str, session: aiohttp.ClientSession):
     """New: IV percentile for volatility filter."""
-    url = "https://api.unusualwhales.com/api/v1/ivRank"
-    headers = {"Authorization": f"Bearer {settings.UW_API_KEY}"}
-    params = {"ticker": ticker}
+    url = f"https://api.unusualwhales.com/api/stock/{ticker}/iv-rank"
+    headers = {
+        "Accept": "application/json, text/plain",
+        "Authorization": f"Bearer {settings.UW_API_KEY}",
+    }
 
     try:
         timeout = aiohttp.ClientTimeout(total=10)
-        async with session.get(
-            url, headers=headers, params=params, timeout=timeout
-        ) as resp:
+        async with session.get(url, headers=headers, timeout=timeout) as resp:
             if resp.status == 200:
                 data = await resp.json()
-                iv_str = data.get("iv_rank", "0")
-                try:
-                    iv_rank = float(iv_str) if iv_str not in ("N/A", None, "") else 0.0
-                except:
-                    iv_rank = 0.0
-                return float(iv_rank) if iv_rank else 0.0  # High vol for day trades
+                # Response has a "data" array with most recent entry first
+                data_array = data.get("data", [])
+                if data_array and len(data_array) > 0:
+                    # Get the most recent IV rank (first item in array)
+                    iv_str = data_array[0].get("iv_rank_1y", "0")
+                    try:
+                        # Convert string like "0.65" to float (65%)
+                        iv_rank = float(iv_str) * 100 if iv_str not in ("N/A", None, "") else 0.0
+                    except (ValueError, TypeError):
+                        iv_rank = 0.0
+                    return iv_rank
             return 0.0
     except Exception as e:
         logger.warning(f"UW IV rank error for {ticker}: {e}")

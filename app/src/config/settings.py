@@ -101,6 +101,8 @@ class Settings:
         "SYM",
     ]
 
+    BLOCKED_TICKERS = {"SPY", "QQQ", "IWM", "TQQQ", "SQQQ"}
+
     BEST_2025_WHEEL_TICKERS = [
         "NVDA",
         "TSLA",
@@ -154,8 +156,8 @@ class Settings:
         "KRE",
     ]
 
-    MIN_PRICE = 8.0
-    MIN_RVOL = 4.0
+    MIN_PRICE = 0.5
+    MIN_RVOL = 1.5
     ORB_MINUTES = 15
     MIN_FLOW_PREMIUM = 25000
     MIN_IV_RANK = 20.0
