@@ -6,7 +6,7 @@ from app.src.utils.logger import logger
 client = StockHistoricalDataClient(settings.ALPACA_KEY, settings.ALPACA_SECRET)
 
 
-async def get_bars(symbols, timeframe=TimeFrame.Minute, limit=1000):
+async def get_bars(symbols, timeframe=TimeFrame.Minute, limit=300000):
     try:
         request = StockBarsRequest(
             symbol_or_symbols=symbols,
