@@ -121,15 +121,20 @@ async def send_signal(
     price: Optional[float] = None,
     session: Optional[aiohttp.ClientSession] = None,
     extra: Optional[Dict[str, Any]] = None,
+    indicator: Optional[str] = None,
 ):
     """
     Send signal to your execution app.
     extra = any dict (e.g., option contract symbol, strike, etc.)
+    indicator = indicator name (defaults to settings.INDICATOR_NAME)
     """
+    if indicator is None:
+        indicator = settings.INDICATOR_NAME
+    
     payload = {
         "ticker_symbol": ticker,
         "action": action,
-        "indicator": settings.INDICATOR_NAME,
+        "indicator": indicator,
         "reason": reason,
     }
 
@@ -167,6 +172,6 @@ async def send_signal(
             ticker,
             action,
             reason,
-            settings.INDICATOR_NAME,
+            indicator,
             extra,
         )

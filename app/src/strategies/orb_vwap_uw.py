@@ -74,7 +74,7 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                 ):
                     reason = f"ORB Breakout + Bullish Flow + Congress Buy + Dark Pool + High IV {rvol:.1f}x"
                     PositionTracker.add_position(ticker, "buy_to_open", price, reason)
-                    await send_signal(ticker, "buy_to_open", reason, price, session)
+                    await send_signal(ticker, "buy_to_open", reason, price, session, indicator=settings.INDICATOR_NAME)
                     return
                 if (
                     price < orb_low
@@ -84,7 +84,7 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                 ):
                     reason = f"ORB Breakdown + Bearish Flow + RVOL {rvol:.1f}x"
                     PositionTracker.add_position(ticker, "sell_to_open", price, reason)
-                    await send_signal(ticker, "sell_to_open", reason, price, session)
+                    await send_signal(ticker, "sell_to_open", reason, price, session, indicator=settings.INDICATOR_NAME)
                     return
             else:
                 if (
@@ -95,12 +95,12 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                 ):
                     reason = f"VWAP Dip + Bullish Flow + Congress + High IV"
                     PositionTracker.add_position(ticker, "buy_to_open", price, reason)
-                    await send_signal(ticker, "buy_to_open", reason, price, session)
+                    await send_signal(ticker, "buy_to_open", reason, price, session, indicator=settings.INDICATOR_NAME)
                     return
                 if price > vwap_val and is_downtrend(df_daily_t) and flow == "bearish":
                     reason = f"VWAP Rally Fade + Bearish Flow"
                     PositionTracker.add_position(ticker, "sell_to_open", price, reason)
-                    await send_signal(ticker, "sell_to_open", reason, price, session)
+                    await send_signal(ticker, "sell_to_open", reason, price, session, indicator=settings.INDICATOR_NAME)
                     return
 
         # EXIT: PnL + unusual put/call flow
@@ -131,7 +131,7 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                 exit_action = (
                     "sell_to_close" if "buy_to_open" in entry_action else "buy_to_close"
                 )
-                await send_signal(ticker, exit_action, reason, price, session)
+                await send_signal(ticker, exit_action, reason, price, session, indicator=settings.INDICATOR_NAME)
                 PositionTracker.close_position(ticker, exit_action, price, reason)
 
     except Exception as e:

@@ -60,6 +60,7 @@ async def run_weekly_put_wheel(session):
                     price=best_put["premium"],
                     session=session,
                     extra={"contract": best_put["contract"]},
+                    indicator="WheelMaster",
                 )
                 WheelTracker.record_put_sold(ticker, best_put)
 
@@ -87,5 +88,6 @@ async def check_assignment_and_sell_call(session, alpaca_positions):
                     price=best_call["premium"],
                     session=session,
                     extra={"contract": best_call["contract"]},
+                    indicator="WheelMaster",
                 )
             WheelTracker.record_assignment(ticker)
