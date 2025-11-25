@@ -20,6 +20,7 @@ from app.src.utils.logger import logger
 
 _OPEN_POSITIONS_TABLE = "AlgoTraderOpenPositions"
 _COMPLETED_TRADES_TABLE = "CompletedTradesForAlgoTrader"
+_INACTIVE_TICKERS_TABLE = "InactiveTickersForAlgoTrading"
 
 
 @lru_cache(maxsize=1)
@@ -54,7 +55,7 @@ class PositionTracker:
 
         dynamodb = _get_dynamodb_resource()
         if dynamodb is None:
-            logger.error(f"Cannot add position: DynamoDB not available")
+            logger.error("Cannot add position: DynamoDB not available")
             return
 
         table = dynamodb.Table(_OPEN_POSITIONS_TABLE)
@@ -83,7 +84,7 @@ class PositionTracker:
 
         dynamodb = _get_dynamodb_resource()
         if dynamodb is None:
-            logger.error(f"Cannot get position: DynamoDB not available")
+            logger.error("Cannot get position: DynamoDB not available")
             return None
 
         table = dynamodb.Table(_OPEN_POSITIONS_TABLE)
@@ -122,7 +123,7 @@ class PositionTracker:
 
         dynamodb = _get_dynamodb_resource()
         if dynamodb is None:
-            logger.error(f"Cannot close position: DynamoDB not available")
+            logger.error("Cannot close position: DynamoDB not available")
             return
 
         open_table = dynamodb.Table(_OPEN_POSITIONS_TABLE)
@@ -252,7 +253,7 @@ class PositionTracker:
 
         dynamodb = _get_dynamodb_resource()
         if dynamodb is None:
-            logger.error(f"Cannot get open positions: DynamoDB not available")
+            logger.error("Cannot get open positions: DynamoDB not available")
             return []
 
         table = dynamodb.Table(_OPEN_POSITIONS_TABLE)
@@ -283,3 +284,94 @@ class PositionTracker:
         except (ClientError, BotoCoreError) as exc:
             logger.error(f"DynamoDB scan failed for open positions: {exc}")
             return []
+
+
+class InactiveTickerTracker:
+    """Track tickers that didn't enter trades with reasons and indicator values."""
+
+    @staticmethod
+    def log_inactive_ticker(
+        ticker: str,
+        reason_not_to_enter_long: str = "",
+        reason_not_to_enter_short: str = "",
+        indicators_values: Optional[dict] = None,
+        indicator: Optional[str] = None,
+    ):
+        """
+        Log an inactive ticker with reasons and indicator values.
+        
+        Args:
+            ticker: Stock ticker symbol
+            reason_not_to_enter_long: Reason why long trade was not entered
+            reason_not_to_enter_short: Reason why short trade was not entered
+            indicators_values: Dictionary of computed indicator values
+            indicator: Indicator name (defaults to settings.INDICATOR_NAME)
+        """
+        if indicator is None:
+            indicator = settings.INDICATOR_NAME
+
+        dynamodb = _get_dynamodb_resource()
+        if dynamodb is None:
+            logger.debug("Cannot log inactive ticker: DynamoDB not available")
+            return
+
+        table = dynamodb.Table(_INACTIVE_TICKERS_TABLE)
+        last_updated = datetime.utcnow().isoformat()
+
+        # Prepare indicators_values as a dict (DynamoDB supports maps)
+        indicators_dict = indicators_values if indicators_values is not None else {}
+
+        try:
+            table.put_item(
+                Item={
+                    "ticker": ticker,
+                    "indicator": indicator,
+                    "last_updated": last_updated,
+                    "reason_not_to_enter_long": reason_not_to_enter_long,
+                    "reason_not_to_enter_short": reason_not_to_enter_short,
+                    "indicators_values": indicators_dict,
+                }
+            )
+            logger.debug(f"Logged inactive ticker {ticker} with indicator {indicator}")
+        except (ClientError, BotoCoreError) as exc:
+            logger.warning(f"DynamoDB write failed for inactive ticker {ticker}: {exc}")
+
+    @staticmethod
+    def get_inactive_ticker(
+        ticker: str, indicator: Optional[str] = None
+    ) -> dict | None:
+        """
+        Get inactive ticker information.
+        
+        Returns:
+            Dictionary with inactive ticker data or None if not found
+        """
+        if indicator is None:
+            indicator = settings.INDICATOR_NAME
+
+        dynamodb = _get_dynamodb_resource()
+        if dynamodb is None:
+            logger.debug("Cannot get inactive ticker: DynamoDB not available")
+            return None
+
+        table = dynamodb.Table(_INACTIVE_TICKERS_TABLE)
+
+        try:
+            response = table.get_item(
+                Key={
+                    "ticker": ticker,
+                    "indicator": indicator,
+                }
+            )
+            if "Item" in response:
+                item = response["Item"]
+                return {
+                    "last_updated": item.get("last_updated"),
+                    "reason_not_to_enter_long": item.get("reason_not_to_enter_long", ""),
+                    "reason_not_to_enter_short": item.get("reason_not_to_enter_short", ""),
+                    "indicators_values": item.get("indicators_values", {}),
+                }
+            return None
+        except (ClientError, BotoCoreError) as exc:
+            logger.warning(f"DynamoDB read failed for inactive ticker {ticker}: {exc}")
+            return None

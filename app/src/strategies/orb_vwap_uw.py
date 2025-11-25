@@ -16,7 +16,10 @@ from app.src.indicators.technical import (
     is_downtrend,
     is_uptrend,
 )
-from app.src.position_tracker.dynamodb_tracker import PositionTracker
+from app.src.position_tracker.dynamodb_tracker import (
+    InactiveTickerTracker,
+    PositionTracker,
+)
 from app.src.utils.helpers import get_dynamic_min_rvol, now_ny
 from app.src.utils.logger import logger
 
@@ -58,7 +61,14 @@ def _log_skip(ticker: str, reason: str, **context):
 async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
     try:
         if ticker not in df_1m.index.get_level_values(0):
-            _log_skip(ticker, "No intraday data returned")
+            reason = "No intraday data returned"
+            _log_skip(ticker, reason)
+            InactiveTickerTracker.log_inactive_ticker(
+                ticker=ticker,
+                reason_not_to_enter_long=reason,
+                reason_not_to_enter_short=reason,
+                indicators_values={"error": reason},
+            )
             return
         df_1m_t = df_1m.xs(ticker, level=0)
         df_daily_t = (
@@ -67,37 +77,63 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
             else None
         )
         if df_daily_t is None or df_daily_t.empty or len(df_daily_t) < 200:
-            _log_skip(
-                ticker,
-                "Insufficient daily history",
-                bars=len(df_daily_t) if df_daily_t is not None else 0,
+            reason = f"Insufficient daily history (bars: {len(df_daily_t) if df_daily_t is not None else 0})"
+            _log_skip(ticker, reason)
+            InactiveTickerTracker.log_inactive_ticker(
+                ticker=ticker,
+                reason_not_to_enter_long=reason,
+                reason_not_to_enter_short=reason,
+                indicators_values={"daily_bars": len(df_daily_t) if df_daily_t is not None else 0},
             )
             return
 
         today_df = df_1m_t[df_1m_t.index.date == now_ny().date()]
         if len(today_df) < 10:
-            _log_skip(ticker, "Not enough intraday bars for today", bars=len(today_df))
+            reason = f"Not enough intraday bars for today (bars: {len(today_df)})"
+            _log_skip(ticker, reason)
+            InactiveTickerTracker.log_inactive_ticker(
+                ticker=ticker,
+                reason_not_to_enter_long=reason,
+                reason_not_to_enter_short=reason,
+                indicators_values={"today_bars": len(today_df)},
+            )
             return
 
         price = today_df["close"].iloc[-1]
         if price < settings.MIN_PRICE:
-            _log_skip(
-                ticker,
-                "Price below MIN_PRICE",
-                price=f"{price:.2f}",
-                min_price=settings.MIN_PRICE,
+            reason = f"Price ({price:.2f}) below MIN_PRICE ({settings.MIN_PRICE})"
+            _log_skip(ticker, reason)
+            InactiveTickerTracker.log_inactive_ticker(
+                ticker=ticker,
+                reason_not_to_enter_long=reason,
+                reason_not_to_enter_short=reason,
+                indicators_values={"price": float(price), "min_price": float(settings.MIN_PRICE)},
             )
             return
 
         rvol = calculate_rvol(df_1m_t, df_daily_t)
         min_rvol = get_dynamic_min_rvol()
         if rvol < min_rvol:
-            _log_skip(ticker, "RVOL below threshold", rvol=f"{rvol:.2f}", min_rvol=f"{min_rvol:.2f}")
+            reason = f"RVOL ({rvol:.2f}) below threshold ({min_rvol:.2f})"
+            _log_skip(ticker, reason)
+            InactiveTickerTracker.log_inactive_ticker(
+                ticker=ticker,
+                reason_not_to_enter_long=reason,
+                reason_not_to_enter_short=reason,
+                indicators_values={"rvol": float(rvol), "min_rvol": float(min_rvol), "price": float(price)},
+            )
             return
 
         orb_high, orb_low = get_opening_range(today_df)
         if orb_high is None or orb_low is None:
-            _log_skip(ticker, "Opening range unavailable")
+            reason = "Opening range unavailable"
+            _log_skip(ticker, reason)
+            InactiveTickerTracker.log_inactive_ticker(
+                ticker=ticker,
+                reason_not_to_enter_long=reason,
+                reason_not_to_enter_short=reason,
+                indicators_values={"price": float(price), "rvol": float(rvol)},
+            )
             return
 
         vwap_val = calculate_vwap(today_df)
@@ -112,21 +148,75 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
         current_time = now_ny().time()
         orb_end_time = time.fromisoformat(settings.ORB_PHASE_END)
 
-        # ENTRY: ORB + VWAP + FLOW + CONGRESS + DARK + IV
+        # Prepare indicator values for logging
+        indicators_dict = {
+            "price": float(price),
+            "rvol": float(rvol),
+            "vwap": float(vwap_val),
+            "orb_high": float(orb_high) if orb_high else None,
+            "orb_low": float(orb_low) if orb_low else None,
+            "flow_signal": flow,
+            "congress_signal": congress,
+            "dark_pool_signal": dark,
+            "iv_rank": float(high_iv),
+            "is_uptrend": bool(is_uptrend(df_daily_t)),
+            "is_downtrend": bool(is_downtrend(df_daily_t)),
+            "current_time": str(current_time),
+            "min_rvol": float(get_dynamic_min_rvol()),
+            "min_iv_rank": float(settings.MIN_IV_RANK),
+        }
+
+        # ENTRY: ORB + VWAP + FLOW + (CONGRESS OR DARK) + IV
+        # More flexible: require flow + at least one of congress/dark pool
+        reason_not_to_enter_long = ""
+        reason_not_to_enter_short = ""
+
         if not pos and high_iv >= settings.MIN_IV_RANK:
             if current_time <= orb_end_time:
+                # Bullish entry: ORB breakout with flow + (congress OR dark pool)
+                long_conditions = []
+                if price <= orb_high:
+                    long_conditions.append(f"Price ({price:.2f}) not above ORB high ({orb_high:.2f})")
+                if price <= vwap_val:
+                    long_conditions.append(f"Price ({price:.2f}) not above VWAP ({vwap_val:.2f})")
+                if not is_uptrend(df_daily_t):
+                    long_conditions.append("Not in uptrend")
+                if flow != "bullish":
+                    long_conditions.append(f"Flow signal not bullish (got: {flow})")
+                if "bullish" not in congress and "bullish" not in dark:
+                    long_conditions.append("No bullish congress or dark pool signal")
+
                 if (
                     price > orb_high
                     and price > vwap_val
                     and is_uptrend(df_daily_t)
                     and flow == "bullish"
-                    and "bullish" in congress
-                    and "bullish" in dark
+                    and ("bullish" in congress or "bullish" in dark)
                 ):
-                    reason = f"ORB Breakout + Bullish Flow + Congress Buy + Dark Pool + High IV {rvol:.1f}x"
+                    signals = []
+                    if "bullish" in congress:
+                        signals.append("Congress")
+                    if "bullish" in dark:
+                        signals.append("Dark Pool")
+                    signal_str = " + ".join(signals) if signals else ""
+                    reason = f"ORB Breakout + Bullish Flow + {signal_str} + High IV {rvol:.1f}x"
                     PositionTracker.add_position(ticker, "buy_to_open", price, reason)
                     await send_signal(ticker, "buy_to_open", reason, price, session, indicator=settings.INDICATOR_NAME)
                     return
+                else:
+                    reason_not_to_enter_long = "; ".join(long_conditions) if long_conditions else "Conditions not met"
+
+                # Bearish entry: ORB breakdown with bearish flow
+                short_conditions = []
+                if price >= orb_low:
+                    short_conditions.append(f"Price ({price:.2f}) not below ORB low ({orb_low:.2f})")
+                if price >= vwap_val:
+                    short_conditions.append(f"Price ({price:.2f}) not below VWAP ({vwap_val:.2f})")
+                if not is_downtrend(df_daily_t):
+                    short_conditions.append("Not in downtrend")
+                if flow != "bearish":
+                    short_conditions.append(f"Flow signal not bearish (got: {flow})")
+
                 if (
                     price < orb_low
                     and price < vwap_val
@@ -137,28 +227,79 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                     PositionTracker.add_position(ticker, "sell_to_open", price, reason)
                     await send_signal(ticker, "sell_to_open", reason, price, session, indicator=settings.INDICATOR_NAME)
                     return
+                else:
+                    reason_not_to_enter_short = "; ".join(short_conditions) if short_conditions else "Conditions not met"
             else:
+                # Post-ORB: VWAP dip buy with flow + (congress OR dark pool)
+                long_conditions = []
+                if price >= vwap_val:
+                    long_conditions.append(f"Price ({price:.2f}) not below VWAP ({vwap_val:.2f})")
+                if not is_uptrend(df_daily_t):
+                    long_conditions.append("Not in uptrend")
+                if flow != "bullish":
+                    long_conditions.append(f"Flow signal not bullish (got: {flow})")
+                if "bullish" not in congress and "bullish" not in dark:
+                    long_conditions.append("No bullish congress or dark pool signal")
+
                 if (
                     price < vwap_val
                     and is_uptrend(df_daily_t)
                     and flow == "bullish"
-                    and "bullish" in congress
+                    and ("bullish" in congress or "bullish" in dark)
                 ):
-                    reason = "VWAP Dip + Bullish Flow + Congress + High IV"
+                    signals = []
+                    if "bullish" in congress:
+                        signals.append("Congress")
+                    if "bullish" in dark:
+                        signals.append("Dark Pool")
+                    signal_str = " + ".join(signals) if signals else ""
+                    reason = f"VWAP Dip + Bullish Flow + {signal_str} + High IV"
                     PositionTracker.add_position(ticker, "buy_to_open", price, reason)
                     await send_signal(ticker, "buy_to_open", reason, price, session, indicator=settings.INDICATOR_NAME)
                     return
+                else:
+                    reason_not_to_enter_long = "; ".join(long_conditions) if long_conditions else "Conditions not met"
+
+                # VWAP rally fade with bearish flow
+                short_conditions = []
+                if price <= vwap_val:
+                    short_conditions.append(f"Price ({price:.2f}) not above VWAP ({vwap_val:.2f})")
+                if not is_downtrend(df_daily_t):
+                    short_conditions.append("Not in downtrend")
+                if flow != "bearish":
+                    short_conditions.append(f"Flow signal not bearish (got: {flow})")
+
                 if price > vwap_val and is_downtrend(df_daily_t) and flow == "bearish":
                     reason = "VWAP Rally Fade + Bearish Flow"
                     PositionTracker.add_position(ticker, "sell_to_open", price, reason)
                     await send_signal(ticker, "sell_to_open", reason, price, session, indicator=settings.INDICATOR_NAME)
                     return
+                else:
+                    reason_not_to_enter_short = "; ".join(short_conditions) if short_conditions else "Conditions not met"
+
+            # Log inactive ticker if no trade was entered
+            if reason_not_to_enter_long or reason_not_to_enter_short:
+                InactiveTickerTracker.log_inactive_ticker(
+                    ticker=ticker,
+                    reason_not_to_enter_long=reason_not_to_enter_long,
+                    reason_not_to_enter_short=reason_not_to_enter_short,
+                    indicators_values=indicators_dict,
+                )
         elif not pos:
+            reason_not_to_enter_long = f"IV rank ({high_iv:.1f}) below minimum ({settings.MIN_IV_RANK})"
+            reason_not_to_enter_short = reason_not_to_enter_long
             _log_skip(
                 ticker,
                 "IV rank filter failed",
                 iv_rank=f"{high_iv:.1f}",
                 required=settings.MIN_IV_RANK,
+            )
+            # Log inactive ticker due to IV rank
+            InactiveTickerTracker.log_inactive_ticker(
+                ticker=ticker,
+                reason_not_to_enter_long=reason_not_to_enter_long,
+                reason_not_to_enter_short=reason_not_to_enter_short,
+                indicators_values=indicators_dict,
             )
 
         # EXIT: PnL + unusual put/call flow

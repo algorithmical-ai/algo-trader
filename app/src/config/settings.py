@@ -159,8 +159,15 @@ class Settings:
     MIN_PRICE = 0.5
     MIN_RVOL = 0.7
     ORB_MINUTES = 15
-    MIN_FLOW_PREMIUM = 25000
-    MIN_IV_RANK = 15.0
+    # Flow alert thresholds - more realistic for actual trading
+    MIN_FLOW_PREMIUM = 50000  # $50k minimum premium for significant flow
+    # Congress trade thresholds
+    MIN_CONGRESS_TRADE_AMOUNT = 1000  # $1k minimum (lower threshold for more signals)
+    # Dark pool thresholds
+    MIN_DARK_POOL_PREMIUM = 100000  # $100k minimum premium
+    MIN_DARK_POOL_SIZE = 5000  # 5k shares minimum
+    # IV rank threshold - allow lower IV for more opportunities
+    MIN_IV_RANK = 10.0  # Lowered from 15.0 to 10.0 for more trades
     TRADING_START = "09:30"
     TRADING_END = "15:55"
     ORB_PHASE_END = "10:30"
