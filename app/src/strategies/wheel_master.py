@@ -3,6 +3,7 @@ from datetime import datetime
 
 from alpaca.data.timeframe import TimeFrame
 
+from app.src.config.settings import settings
 from app.src.core.signaler import send_signal
 from app.src.data.alpaca_client import get_bars
 from app.src.data.option_chain import get_option_chain
@@ -28,7 +29,7 @@ async def run_weekly_put_wheel(session):
     if now_ny().weekday() != 4 or not ("15:55" <= now_ny().strftime("%H:%M") <= "16:10"):
         return
 
-    tickers = ["NVDA", "AAPL", "MSFT", "AMD", "TSLA", "META", "GOOGL", "AMZN", "SMCI", "AVGO"]
+    tickers = settings.BEST_2025_WHEEL_TICKERS  # Best tickers for the wheel
     
     for ticker in tickers:
         try:

@@ -98,6 +98,14 @@ class Settings:
         "SYM",
     ]
 
+    BEST_2025_WHEEL_TICKERS = [
+    "NVDA", "TSLA", "AMD", "SMCI", "ARM", "HOOD", "COIN", "MARA", "RIOT", "CLSK",
+    "UPST", "SOFI", "AFRM", "PATH", "RBLX", "DKNG", "IONQ", "RGTI", "ASTS", "SOUN",
+    "AAPL", "MSFT", "GOOGL", "AMZN", "META", "AVGO", "NFLX", "ADBE", "CRM", "ORCL",
+    "NOW", "PANW", "CRWD", "ZS", "NET", "DDOG", "MDB", "SNOW", "PLTR", "AI",
+    "GME", "AMC", "SPY", "QQQ", "IWM", "TNA", "SQQQ", "TQQQ", "XLF", "KRE"
+]
+
     MIN_PRICE = 8.0
     MIN_RVOL = 7.0
     ORB_MINUTES = 15
