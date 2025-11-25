@@ -106,11 +106,11 @@ async def get_iv_rank(ticker: str, session: aiohttp.ClientSession):
                     iv_rank = float(iv_str) if iv_str not in ("N/A", None, "") else 0.0
                 except:
                     iv_rank = 0.0
-                return iv_rank > 70  # High vol for day trades
-            return False
+                return float(iv_rank) if iv_rank else 0.0  # High vol for day trades
+            return 0.0
     except Exception as e:
         logger.warning(f"UW IV rank error for {ticker}: {e}")
-        return False
+        return 0.0
 
 
 async def get_screener_tickers(session: aiohttp.ClientSession):
