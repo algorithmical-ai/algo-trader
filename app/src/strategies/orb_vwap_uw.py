@@ -69,8 +69,8 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                     and price > vwap_val
                     and is_uptrend(df_daily_t)
                     and flow == "bullish"
-                    and congress == "bullish"
-                    and dark == "bullish"
+                    and "bullish" in (congress or "")
+                    and "bullish" in (dark or "")
                 ):
                     reason = f"ORB Breakout + Bullish Flow + Congress Buy + Dark Pool + High IV {rvol:.1f}x"
                     PositionTracker.add_position(ticker, "buy_to_open", price, reason)
@@ -91,7 +91,7 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                     price < vwap_val
                     and is_uptrend(df_daily_t)
                     and flow == "bullish"
-                    and congress == "bullish"
+                    and "bullish" in (congress or "")
                 ):
                     reason = f"VWAP Dip + Bullish Flow + Congress + High IV"
                     PositionTracker.add_position(ticker, "buy_to_open", price, reason)

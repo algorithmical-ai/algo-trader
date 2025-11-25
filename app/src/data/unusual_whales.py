@@ -42,7 +42,7 @@ async def get_congress_trades(ticker: str, session: aiohttp.ClientSession):
     """New: Politician trades for edge (buy if they buy)."""
     url = "https://api.unusualwhales.com/api/v1/congressTrades"
     headers = {"Authorization": f"Bearer {settings.UW_API_KEY}"}
-    params = {"ticker": ticker, "limit": 10, "sort": "desc"}
+    params = {"ticker": ticker, "limit": 10, "days": 7, "sort": "desc"}
 
     try:
         async with session.get(url, headers=headers, params=params, timeout=10) as resp:
@@ -103,7 +103,7 @@ async def get_screener_tickers(session: aiohttp.ClientSession):
     """New: Dynamic watchlist from stock screener (high vol + flow)."""
     url = "https://api.unusualwhales.com/api/v1/stockScreener"
     headers = {"Authorization": f"Bearer {settings.UW_API_KEY}"}
-    params = {"filters": "high_volume,unusual_flow", "limit": 100}
+    params = {"filters": "high_volume,unusual_flow", "limit": 10, "days": 70}
 
     try:
         async with session.get(url, headers=headers, params=params, timeout=10) as resp:
