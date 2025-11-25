@@ -157,10 +157,10 @@ class Settings:
     ]
 
     MIN_PRICE = 0.5
-    MIN_RVOL = 1.0
+    MIN_RVOL = 0.7
     ORB_MINUTES = 15
     MIN_FLOW_PREMIUM = 25000
-    MIN_IV_RANK = 20.0
+    MIN_IV_RANK = 15.0
     TRADING_START = "09:30"
     TRADING_END = "15:55"
     ORB_PHASE_END = "10:30"
