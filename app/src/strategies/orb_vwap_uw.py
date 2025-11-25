@@ -17,7 +17,7 @@ from app.src.indicators.technical import (
     is_uptrend,
 )
 from app.src.position_tracker.dynamodb_tracker import PositionTracker
-from app.src.utils.helpers import now_ny
+from app.src.utils.helpers import get_dynamic_min_rvol, now_ny
 from app.src.utils.logger import logger
 
 WATCHLIST = settings.WATCHLIST.copy()
@@ -90,8 +90,9 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
             return
 
         rvol = calculate_rvol(df_1m_t, df_daily_t)
-        if rvol < settings.MIN_RVOL:
-            _log_skip(ticker, "RVOL below threshold", rvol=f"{rvol:.2f}", min_rvol=settings.MIN_RVOL)
+        min_rvol = get_dynamic_min_rvol()
+        if rvol < min_rvol:
+            _log_skip(ticker, "RVOL below threshold", rvol=f"{rvol:.2f}", min_rvol=f"{min_rvol:.2f}")
             return
 
         orb_high, orb_low = get_opening_range(today_df)

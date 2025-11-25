@@ -125,10 +125,12 @@ async def get_iv_rank(ticker: str, session: aiohttp.ClientSession, max_retries: 
                 elif 400 <= resp.status < 500:
                     # 4xx error - retry with backoff
                     if attempt < max_retries - 1:
+                        # Use longer backoff for rate limits (429)
+                        backoff_time = 2 if resp.status == 429 else 1
                         logger.warning(
                             f"UW IV rank 4xx error for {ticker}: status {resp.status}, retrying ({attempt + 1}/{max_retries})"
                         )
-                        await asyncio.sleep(1)
+                        await asyncio.sleep(backoff_time)
                         continue
                     else:
                         logger.error(f"UW IV rank failed for {ticker} after {max_retries} attempts: status {resp.status}")
