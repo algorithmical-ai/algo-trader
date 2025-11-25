@@ -47,4 +47,3 @@ def test_is_downtrend(sample_daily_data):
     df = sample_daily_data.copy()
     df["close"] = np.linspace(200, 100, 300)
     assert is_downtrend(df)
-

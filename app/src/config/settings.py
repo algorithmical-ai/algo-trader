@@ -11,7 +11,7 @@ class Settings:
     ALPACA_KEY = os.getenv("APCA_API_KEY_ID")
     ALPACA_SECRET = os.getenv("APCA_API_SECRET_KEY")
     UW_API_KEY = os.getenv("UNUSUAL_WHALES_API_KEY")
-    REDIS_URL = os.getenv("REDIS_URL")
+    REDIS_URL = os.getenv("REDIS_URL", "")
     WEBHOOK_URL = (
         "https://tradingview-webhook-maverick-d375f5273444.herokuapp.com/webhook"
     )

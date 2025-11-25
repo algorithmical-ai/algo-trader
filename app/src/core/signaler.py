@@ -9,7 +9,7 @@ async def send_signal(
     action: str,
     reason: str,
     price: float | None = None,
-    session: aiohttp.ClientSession = None,
+    session: aiohttp.ClientSession | None = None,
 ):
     payload = {
         "ticker_symbol": ticker,
@@ -21,19 +21,30 @@ async def send_signal(
         payload["price"] = str(round(price, 2))
 
     try:
-        async with session.post(
-            settings.WEBHOOK_URL, json=payload, timeout=aiohttp.ClientTimeout(total=10)
-        ) as resp:
-            if resp.status == 200:
-                logger.info(
-                    f"SIGNAL SENT: {ticker} {action} | {reason} | Price: ${price:.2f}"
-                    if price
-                    else f"SIGNAL SENT: {ticker} {action} | {reason}"
-                )
-            else:
-                error_text = await resp.text()
-                logger.error(
-                    f"Webhook failed for {ticker}: {resp.status} - {error_text}"
-                )
+        if session is None:
+            async with aiohttp.ClientSession() as new_session:
+                async with new_session.post(
+                    settings.WEBHOOK_URL,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as resp:
+                    if resp.status == 200:
+                        logger.info(
+                            f"SIGNAL SENT: {ticker} {action} | {reason} | Price: ${price:.2f}"
+                            if price
+                            else f"SIGNAL SENT: {ticker} {action} | {reason}"
+                        )
+        else:
+            async with session.post(
+                settings.WEBHOOK_URL,
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status == 200:
+                    logger.info(
+                        f"SIGNAL SENT: {ticker} {action} | {reason} | Price: ${price:.2f}"
+                        if price
+                        else f"SIGNAL SENT: {ticker} {action} | {reason}"
+                    )
     except Exception as e:
         logger.error(f"Signal send error for {ticker}: {e}")

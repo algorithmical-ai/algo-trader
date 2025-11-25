@@ -1,21 +1,33 @@
 import aiohttp
+
 from app.src.config.settings import settings
 from app.src.utils.logger import logger
+
 
 async def get_flow_signal(ticker: str, session: aiohttp.ClientSession):
     """Enhanced flow with sweeps, openers, and sentiment."""
     url = "https://api.unusualwhales.com/api/v1/flowAlerts"
     headers = {"Authorization": f"Bearer {settings.UW_API_KEY}"}
-    params = {"ticker": ticker, "limit": 5, "sort": "desc", "type": "sweep,block,opener"}
+    params = {
+        "ticker": ticker,
+        "limit": 5,
+        "sort": "desc",
+        "type": "sweep,block,opener",
+    }
 
     try:
-        async with session.get(url, headers=headers, params=params, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+        async with session.get(
+            url, headers=headers, params=params, timeout=aiohttp.ClientTimeout(total=10)
+        ) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 for alert in data.get("data", []):
                     premium = float(alert.get("total_premium", 0))
                     sentiment = alert.get("sentiment", "").lower()
-                    if premium >= settings.MIN_FLOW_PREMIUM and ("opener" in alert.get("type", "") or "sweep" in alert.get("type", "")):
+                    if premium >= settings.MIN_FLOW_PREMIUM and (
+                        "opener" in alert.get("type", "")
+                        or "sweep" in alert.get("type", "")
+                    ):
                         if "bullish" in sentiment or "call" in alert.get("side", ""):
                             return "bullish"
                         elif "bearish" in sentiment or "put" in alert.get("side", ""):
@@ -24,6 +36,7 @@ async def get_flow_signal(ticker: str, session: aiohttp.ClientSession):
     except Exception as e:
         logger.warning(f"UW flow fetch error for {ticker}: {e}")
         return None
+
 
 async def get_congress_trades(ticker: str, session: aiohttp.ClientSession):
     """New: Politician trades for edge (buy if they buy)."""
@@ -36,12 +49,16 @@ async def get_congress_trades(ticker: str, session: aiohttp.ClientSession):
             if resp.status == 200:
                 data = await resp.json()
                 for trade in data.get("data", []):
-                    if trade.get("transaction_type") == "buy" and float(trade.get("amount", 0)) > 10000:
+                    if (
+                        trade.get("transaction_type") == "buy"
+                        and float(trade.get("amount", 0)) > 10000
+                    ):
                         return "bullish"
                 return None
     except Exception as e:
         logger.warning(f"UW congress error for {ticker}: {e}")
         return None
+
 
 async def get_dark_pool(ticker: str, session: aiohttp.ClientSession):
     """New: Dark pool volume for institutional support."""
@@ -55,11 +72,14 @@ async def get_dark_pool(ticker: str, session: aiohttp.ClientSession):
                 data = await resp.json()
                 total_vol = sum(float(d.get("volume", 0)) for d in data.get("data", []))
                 if total_vol > 100000:  # High institutional interest
-                    return "bullish" if "buy" in str(data) else "bearish"  # Simple sentiment
+                    return (
+                        "bullish" if "buy" in str(data) else "bearish"
+                    )  # Simple sentiment
                 return None
     except Exception as e:
         logger.warning(f"UW dark pool error for {ticker}: {e}")
         return None
+
 
 async def get_iv_rank(ticker: str, session: aiohttp.ClientSession):
     """New: IV percentile for volatility filter."""
@@ -77,6 +97,7 @@ async def get_iv_rank(ticker: str, session: aiohttp.ClientSession):
     except Exception as e:
         logger.warning(f"UW IV rank error for {ticker}: {e}")
         return False
+
 
 async def get_screener_tickers(session: aiohttp.ClientSession):
     """New: Dynamic watchlist from stock screener (high vol + flow)."""
