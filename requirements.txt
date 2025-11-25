@@ -7,3 +7,4 @@ python-dotenv
 pytz
 redis
 loguru
+alpaca-trade-api

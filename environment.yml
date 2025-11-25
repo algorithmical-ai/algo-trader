@@ -16,4 +16,6 @@ dependencies:
       - aiohttp
       - python-dotenv
       - loguru
+      - alpaca-trade-api
       - -r requirements-dev.txt
+      - -r requirements.txt

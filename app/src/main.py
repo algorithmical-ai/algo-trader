@@ -7,7 +7,7 @@ from app.src.core.scanner import scan_once
 from app.src.strategies.orb_vwap_uw import refresh_watchlist
 from app.src.utils.helpers import now_ny
 from app.src.utils.logger import logger
-
+from app.src.strategies.wheel_master import run_weekly_put_wheel
 
 async def main():
     logger.success(
@@ -37,6 +37,7 @@ async def main():
                     await asyncio.sleep(60)  # Prevent double refresh
 
                 await scan_once(session)
+                await run_weekly_put_wheel(session)
                 await asyncio.sleep(25)
             except Exception as e:
                 logger.critical(f"Main loop error: {e}")
