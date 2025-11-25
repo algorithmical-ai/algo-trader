@@ -1,3 +1,5 @@
+import asyncio
+
 import aiohttp
 
 from app.src.config.settings import settings
@@ -94,7 +96,7 @@ async def get_dark_pool(ticker: str, session: aiohttp.ClientSession):
         return None
 
 
-async def get_iv_rank(ticker: str, session: aiohttp.ClientSession):
+async def get_iv_rank(ticker: str, session: aiohttp.ClientSession, max_retries: int = 3):
     """New: IV percentile for volatility filter."""
     url = f"https://api.unusualwhales.com/api/stock/{ticker}/iv-rank"
     headers = {
@@ -102,26 +104,49 @@ async def get_iv_rank(ticker: str, session: aiohttp.ClientSession):
         "Authorization": f"Bearer {settings.UW_API_KEY}",
     }
 
-    try:
-        timeout = aiohttp.ClientTimeout(total=10)
-        async with session.get(url, headers=headers, timeout=timeout) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                # Response has a "data" array with most recent entry first
-                data_array = data.get("data", [])
-                if data_array and len(data_array) > 0:
-                    # Get the most recent IV rank (first item in array)
-                    iv_str = data_array[0].get("iv_rank_1y", "0")
-                    try:
-                        # Convert string like "0.65" to float (65%)
-                        iv_rank = float(iv_str) * 100 if iv_str not in ("N/A", None, "") else 0.0
-                    except (ValueError, TypeError):
-                        iv_rank = 0.0
-                    return iv_rank
-            return 0.0
-    except Exception as e:
-        logger.warning(f"UW IV rank error for {ticker}: {e}")
-        return 0.0
+    for attempt in range(max_retries):
+        try:
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with session.get(url, headers=headers, timeout=timeout) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    # Response has a "data" array with most recent entry first
+                    data_array = data.get("data", [])
+                    if data_array and len(data_array) > 0:
+                        # Get the most recent IV rank (first item in array)
+                        iv_str = data_array[0].get("iv_rank_1y", "0")
+                        try:
+                            # Convert string like "0.65" to float (65%)
+                            iv_rank = float(iv_str) * 100 if iv_str not in ("N/A", None, "") else 0.0
+                        except (ValueError, TypeError):
+                            iv_rank = 0.0
+                        return iv_rank
+                    return 0.0
+                elif 400 <= resp.status < 500:
+                    # 4xx error - retry with backoff
+                    if attempt < max_retries - 1:
+                        logger.warning(
+                            f"UW IV rank 4xx error for {ticker}: status {resp.status}, retrying ({attempt + 1}/{max_retries})"
+                        )
+                        await asyncio.sleep(1)
+                        continue
+                    else:
+                        logger.error(f"UW IV rank failed for {ticker} after {max_retries} attempts: status {resp.status}")
+                        return 0.0
+                else:
+                    # Non-4xx error, don't retry
+                    logger.warning(f"UW IV rank error for {ticker}: status {resp.status}")
+                    return 0.0
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"UW IV rank exception for {ticker}: {e}, retrying ({attempt + 1}/{max_retries})")
+                await asyncio.sleep(1)
+                continue
+            else:
+                logger.warning(f"UW IV rank error for {ticker} after {max_retries} attempts: {e}")
+                return 0.0
+    
+    return 0.0
 
 
 async def get_screener_tickers(session: aiohttp.ClientSession):
