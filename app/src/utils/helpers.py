@@ -3,7 +3,6 @@ from datetime import datetime, time
 import pytz
 
 from app.src.config.settings import settings
-from app.src.utils.logger import logger
 
 NY = pytz.timezone("America/New_York")
 

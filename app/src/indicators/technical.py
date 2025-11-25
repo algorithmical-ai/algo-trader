@@ -5,7 +5,6 @@ import talib
 
 from app.src.config.settings import settings
 from app.src.utils.helpers import NY, now_ny
-from app.src.utils.logger import logger
 
 
 def calculate_rvol(df_1m: pd.DataFrame) -> float:

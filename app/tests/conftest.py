@@ -15,8 +15,8 @@ def sample_1m_data():
     base = datetime(2025, 10, 27, 9, 30, tzinfo=NY)  # Monday
     index = []
     current = base
-    for day in range(21):  # 20 past + today
-        for minute in range(390):  # 9:30 to 16:00 = 390 minutes
+    for _ in range(21):  # 20 past + today
+        for _ in range(390):  # 9:30 to 16:00 = 390 minutes
             if current.weekday() < 5:  # Mon-Fri only
                 index.append(current)
             current += timedelta(minutes=1)

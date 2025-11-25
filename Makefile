@@ -13,7 +13,7 @@ test:
 
 lint:
 	@echo "$(YELLOW)Running pylint...$(NC)"
-	conda run -n algo-trader pylint app/ app/tests/ --score=y
+	conda run -n algo-trader pylint app/src/ app/tests/ --score=y --rcfile=.pylintrc
 
 format:
 	@echo "$(YELLOW)Formatting code...$(NC)"

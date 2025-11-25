@@ -1,4 +1,3 @@
-import asyncio
 from datetime import time
 
 from app.src.config.settings import settings
