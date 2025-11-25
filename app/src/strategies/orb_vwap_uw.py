@@ -8,7 +8,7 @@ from app.src.data.unusual_whales import (get_congress_trades, get_dark_pool,
 from app.src.indicators.technical import (calculate_rvol, calculate_vwap,
                                           get_opening_range, is_downtrend,
                                           is_uptrend)
-from app.src.position_tracker.redis_tracker import PositionTracker
+from app.src.position_tracker.dynamodb_tracker import PositionTracker
 from app.src.utils.helpers import now_ny
 from app.src.utils.logger import logger
 
