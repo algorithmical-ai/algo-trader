@@ -2,12 +2,20 @@ from datetime import time
 
 from app.src.config.settings import settings
 from app.src.core.signaler import send_signal
-from app.src.data.unusual_whales import (get_congress_trades, get_dark_pool,
-                                         get_flow_signal, get_iv_rank,
-                                         get_screener_tickers)
-from app.src.indicators.technical import (calculate_rvol, calculate_vwap,
-                                          get_opening_range, is_downtrend,
-                                          is_uptrend)
+from app.src.data.unusual_whales import (
+    get_congress_trades,
+    get_dark_pool,
+    get_flow_signal,
+    get_iv_rank,
+    get_screener_tickers,
+)
+from app.src.indicators.technical import (
+    calculate_rvol,
+    calculate_vwap,
+    get_opening_range,
+    is_downtrend,
+    is_uptrend,
+)
 from app.src.position_tracker.dynamodb_tracker import PositionTracker
 from app.src.utils.helpers import now_ny
 from app.src.utils.logger import logger
@@ -18,6 +26,22 @@ async def refresh_watchlist(session):
     global WATCHLIST
     WATCHLIST = await get_screener_tickers(session)
     logger.info(f"Watchlist refreshed: {len(WATCHLIST)} tickers")
+
+
+def _normalize_signal(value) -> str:
+    if value is None:
+        return ""
+    return str(value).strip().lower()
+
+
+def _safe_float(value) -> float:
+    try:
+        if value is None:
+            return 0.0
+        return float(value)
+    except (TypeError, ValueError):
+        logger.warning(f"Unable to coerce value '{value}' to float; defaulting to 0.0")
+        return 0.0
 
 
 async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
@@ -46,31 +70,31 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
             return
 
         orb_high, orb_low = get_opening_range(today_df)
-        if not orb_high:
+        if orb_high is None or orb_low is None:
             return
 
         vwap_val = calculate_vwap(today_df)
 
         # MAX UW USAGE
-        flow = await get_flow_signal(ticker, session)
-        congress = await get_congress_trades(ticker, session)
-        dark = await get_dark_pool(ticker, session)
-        high_iv = await get_iv_rank(ticker, session)
+        flow = _normalize_signal(await get_flow_signal(ticker, session))
+        congress = _normalize_signal(await get_congress_trades(ticker, session))
+        dark = _normalize_signal(await get_dark_pool(ticker, session))
+        high_iv = _safe_float(await get_iv_rank(ticker, session))
 
         pos = PositionTracker.get_position(ticker)
         current_time = now_ny().time()
         orb_end_time = time.fromisoformat(settings.ORB_PHASE_END)
 
         # ENTRY: ORB + VWAP + FLOW + CONGRESS + DARK + IV
-        if not pos and high_iv:
+        if not pos and high_iv >= settings.MIN_IV_RANK:
             if current_time <= orb_end_time:
                 if (
                     price > orb_high
                     and price > vwap_val
                     and is_uptrend(df_daily_t)
                     and flow == "bullish"
-                    and "bullish" in (congress or "")
-                    and "bullish" in (dark or "")
+                    and "bullish" in congress
+                    and "bullish" in dark
                 ):
                     reason = f"ORB Breakout + Bullish Flow + Congress Buy + Dark Pool + High IV {rvol:.1f}x"
                     PositionTracker.add_position(ticker, "buy_to_open", price, reason)
@@ -91,7 +115,7 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                     price < vwap_val
                     and is_uptrend(df_daily_t)
                     and flow == "bullish"
-                    and "bullish" in (congress or "")
+                    and "bullish" in congress
                 ):
                     reason = f"VWAP Dip + Bullish Flow + Congress + High IV"
                     PositionTracker.add_position(ticker, "buy_to_open", price, reason)
@@ -113,7 +137,7 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                 else ((entry_price - price) / entry_price) * 100
             )
 
-            exit_flow = await get_flow_signal(ticker, session)
+            exit_flow = _normalize_signal(await get_flow_signal(ticker, session))
             if (
                 (
                     pnl_pct >= 2.0
@@ -134,5 +158,5 @@ async def evaluate_ticker(ticker: str, df_1m, df_daily, session):
                 await send_signal(ticker, exit_action, reason, price, session, indicator=settings.INDICATOR_NAME)
                 PositionTracker.close_position(ticker, exit_action, price, reason)
 
-    except Exception as e:
-        logger.error(f"Strategy error {ticker}: {e}")
+    except Exception:
+        logger.exception(f"Strategy error {ticker}")
