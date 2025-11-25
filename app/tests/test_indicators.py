@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from algo_trader.indicators.technical import (
+from app.src.indicators.technical import (
     calculate_rvol,
     get_opening_range,
     calculate_vwap,

@@ -1,6 +1,6 @@
 import pytest
-from algo_trader.core.signaler import send_signal
-
+from app.src.core.signaler import send_signal
+from unittest.mock import MagicMock
 
 @pytest.mark.asyncio
 async def test_signal_payload():

@@ -2,8 +2,8 @@ import json
 import os
 from redis import Redis
 from datetime import datetime
-from ..config.settings import settings
-from ..logger import logger
+from app.src.config.settings import settings
+from app.src.utils.logger import logger
 
 redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
 
@@ -20,7 +20,7 @@ class PositionTracker:
         }
         redis_client.hset(key, mapping=data)
         redis_client.expire(key, 86400)  # 24 hours
-        logger.success(f"POSITION ADDED: {ticker} {action} @ ${price:.2f} | {reason}")
+        logger.info(f"POSITION ADDED: {ticker} {action} @ ${price:.2f} | {reason}")
 
     @staticmethod
     def get_position(ticker: str) -> dict | None:
@@ -43,11 +43,11 @@ class PositionTracker:
                 else ((entry_price - exit_price) / entry_price) * 100
             )
             redis_client.delete(key)
-            logger.success(
+            logger.info(
                 f"POSITION CLOSED: {ticker} {exit_action} @ ${exit_price:.2f} | PnL: {pnl_pct:+.2f}% | {reason}"
             )
         else:
-            logger.warning(f"No open position for {ticker}")
+            logger.info(f"No open position for {ticker}")
 
     @staticmethod
     def get_open_positions() -> list[str]:

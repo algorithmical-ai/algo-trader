@@ -1,18 +1,18 @@
 import asyncio
 from datetime import time
-from ..indicators.technical import (
+from app.src.indicators.technical import (
     calculate_rvol,
     get_opening_range,
     calculate_vwap,
     is_uptrend,
     is_downtrend,
 )
-from ..data.unusual_whales import get_flow_signal
-from ..core.signaler import send_signal
-from ..position_tracker.redis_tracker import PositionTracker
-from ..utils.helpers import now_ny
-from ..config.settings import settings
-from ..logger import logger
+from app.src.data.unusual_whales import get_flow_signal
+from app.src.core.signaler import send_signal
+from app.src.position_tracker.redis_tracker import PositionTracker
+from app.src.utils.helpers import now_ny
+from app.src.config.settings import settings
+from app.src.utils.logger import logger
 
 
 async def evaluate_ticker(ticker: str, df_1m, df_daily, session):

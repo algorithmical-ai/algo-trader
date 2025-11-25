@@ -1,23 +1,23 @@
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
-from algo_trader.strategies.orb_vwap_uw import evaluate_ticker
-from algo_trader.core.signaler import send_signal
-from algo_trader.position_tracker.redis_tracker import PositionTracker
+from app.src.strategies.orb_vwap_uw import evaluate_ticker
+from app.src.core.signaler import send_signal
+from app.src.position_tracker.redis_tracker import PositionTracker
 
 
 @pytest.mark.asyncio
 async def test_orb_long_entry(sample_1m_data, sample_daily_data, mocker):
     session = MagicMock()
     mocker.patch(
-        "algo_trader.strategies.orb_vwap_uw.now_ny",
+        "app.src.strategies.orb_vwap_uw.now_ny",
         return_value=sample_1m_data.index[20],
     )
     mocker.patch(
-        "algo_trader.strategies.orb_vwap_uw.get_flow_signal", return_value="bullish"
+        "app.src.strategies.orb_vwap_uw.get_flow_signal", return_value="bullish"
     )
     mocker.patch(
-        "algo_trader.position_tracker.redis_tracker.redis_client", new=MagicMock()
+        "app.src.position_tracker.redis_tracker.redis_client", new=MagicMock()
     )
 
     # Force price above ORB high and VWAP
@@ -37,13 +37,13 @@ async def test_orb_long_entry(sample_1m_data, sample_daily_data, mocker):
 async def test_exit_on_profit(sample_1m_data, sample_daily_data, mocker):
     session = AsyncMock()
     mocker.patch(
-        "algo_trader.strategies.orb_vwap_uw.now_ny",
+        "app.src.strategies.orb_vwap_uw.now_ny",
         return_value=sample_1m_data.index[-1],
     )
-    mocker.patch("algo_trader.position_tracker.redis_tracker.redis_client")
+    mocker.patch("app.src.position_tracker.redis_tracker.redis_client")
 
     # Simulate open long at 100, current 105 → +5%
-    from algo_trader.position_tracker.redis_tracker import redis_client
+    from app.src.position_tracker.redis_tracker import redis_client
 
     redis_client.hset(
         "position:TEST",

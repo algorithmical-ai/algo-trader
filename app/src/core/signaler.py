@@ -1,13 +1,13 @@
 import aiohttp
-from ..config.settings import settings
-from ..logger import logger
+from app.src.config.settings import settings
+from app.src.utils.logger import logger
 
 
 async def send_signal(
     ticker: str,
     action: str,
     reason: str,
-    price: float = None,
+    price: float | None = None,
     session: aiohttp.ClientSession = None,
 ):
     payload = {
@@ -17,7 +17,7 @@ async def send_signal(
         "reason": reason,
     }
     if price:
-        payload["price"] = round(price, 2)
+        payload["price"] = str(round(price, 2))
 
     try:
         async with session.post(

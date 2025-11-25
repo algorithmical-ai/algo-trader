@@ -1,4 +1,4 @@
-from algo_trader.position_tracker.redis_tracker import PositionTracker
+from app.src.position_tracker.redis_tracker import PositionTracker
 
 
 def test_position_lifecycle(mock_redis):

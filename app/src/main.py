@@ -1,12 +1,12 @@
 import asyncio
 import aiohttp
-from core.scanner import scan_once
-from logger import logger
-from utils.helpers import now_ny
+from app.src.core.scanner import scan_once
+from app.src.utils.logger import logger
+from app.src.utils.helpers import now_ny
 
 
 async def main():
-    logger.success(
+    logger.info(
         f"[{now_ny()}] Algo Trader Elite Bot Started - 100 Tickers | Redis | Webhooks"
     )
     timeout = aiohttp.ClientTimeout(total=30)
@@ -20,7 +20,7 @@ async def main():
                 logger.info("Bot stopped by user")
                 break
             except Exception as e:
-                logger.critical(f"Main loop error: {e}")
+                logger.error(f"Main loop error: {e}")
                 await asyncio.sleep(60)
 
 

@@ -1,6 +1,6 @@
 import aiohttp
-from ..config.settings import settings
-from ..logger import logger
+from app.src.config.settings import settings
+from app.src.utils.logger import logger
 
 
 async def get_flow_signal(ticker: str, session: aiohttp.ClientSession):

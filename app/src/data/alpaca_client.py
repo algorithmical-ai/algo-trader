@@ -1,7 +1,7 @@
 from alpaca.data import StockHistoricalDataClient, StockBarsRequest
-from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
-from ..config.settings import settings
-from ..logger import logger
+from alpaca.trading.enums import TimeFrame
+from app.src.config.settings import settings
+from app.src.utils.logger import logger
 
 client = StockHistoricalDataClient(settings.ALPACA_KEY, settings.ALPACA_SECRET)
 

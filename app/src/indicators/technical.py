@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 import talib
 from datetime import timedelta
-from ..utils.helpers import now_ny, NY
-from ..config.settings import settings
-from ..logger import logger
+from app.src.utils.helpers import now_ny, NY
+from app.src.config.settings import settings
+from app.src.utils.logger import logger
 
 
 def calculate_rvol(df_1m: pd.DataFrame) -> float:
@@ -23,8 +23,8 @@ def get_opening_range(df_today: pd.DataFrame) -> tuple[float, float]:
     orb_end = market_open + timedelta(minutes=settings.ORB_MINUTES)
     orb_data = df_today[(df_today.index >= market_open) & (df_today.index <= orb_end)]
     if len(orb_data) == 0:
-        return None, None
-    return orb_data["high"].max(), orb_data["low"].min()
+        return None, None  # type: ignore
+    return orb_data["high"].max(), orb_data["low"].min()  # type: ignore
 
 
 def calculate_vwap(df_today: pd.DataFrame) -> float:
