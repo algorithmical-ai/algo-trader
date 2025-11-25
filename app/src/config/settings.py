@@ -157,7 +157,7 @@ class Settings:
     ]
 
     MIN_PRICE = 0.5
-    MIN_RVOL = 1.5
+    MIN_RVOL = 1.0
     ORB_MINUTES = 15
     MIN_FLOW_PREMIUM = 25000
     MIN_IV_RANK = 20.0
