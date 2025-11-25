@@ -1,23 +1,19 @@
-name: daytrader-pro
+name: algo-trader
 channels:
   - conda-forge
   - defaults
 dependencies:
   - python=3.11
   - pip
-  - aiohttp
-  - pandas
+  - libta-lib
+  - ta-lib=0.6.4
   - numpy
+  - pandas
   - pytz
-  - python-dotenv
-  - ta-lib=0.4.28
-  - asyncio
+  - redis-py
   - pip:
-      - alpaca-py>=3.3.0
-      - redis>=5.0.1
-      - loguru>=0.7.0
-      - requests>=2.32.3
-      - redis>=5.0.1
-      - aiohttp>=3.11.11
-      - python-dotenv>=1.0.0
-      - pytz>=2025.1
+      - alpaca-py>=0.28.0
+      - aiohttp==3.9.5
+      - python-dotenv==1.0.1
+      - loguru==0.7.2
+      - -r requirements-dev.txt
