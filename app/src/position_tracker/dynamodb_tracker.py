@@ -1,18 +1,19 @@
-import importlib
 from datetime import datetime
 from functools import lru_cache
-from importlib import util as importlib_util
-from typing import Any, Optional
+from typing import Optional
 
-_boto3_spec = importlib_util.find_spec("boto3")
-boto3: Any = None
-BotoCoreError: Any = Exception
-ClientError: Any = Exception
-if _boto3_spec:
-    boto3 = importlib.import_module("boto3")
-    botocore_exc = importlib.import_module("botocore.exceptions")
-    BotoCoreError = getattr(botocore_exc, "BotoCoreError")
-    ClientError = getattr(botocore_exc, "ClientError")
+# Import legacy_cgi before boto3 to provide cgi module for Python 3.13+
+try:
+    import sys
+
+    import legacy_cgi  # noqa: F401
+    if "cgi" not in sys.modules:
+        sys.modules["cgi"] = legacy_cgi
+except ImportError:
+    pass  # Not needed for Python < 3.13
+
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.src.config.settings import settings
 from app.src.utils.logger import logger
@@ -23,9 +24,6 @@ _COMPLETED_TRADES_TABLE = "CompletedTradesForAlgoTrader"
 
 @lru_cache(maxsize=1)
 def _get_dynamodb_resource():
-    if boto3 is None:
-        logger.warning("boto3 not available; DynamoDB operations will fail")
-        return None
     if not settings.AWS_ACCESS_KEY_ID or not settings.AWS_SECRET_ACCESS_KEY:
         logger.warning("AWS credentials not configured; DynamoDB operations will fail")
         return None

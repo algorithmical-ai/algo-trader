@@ -8,3 +8,5 @@ pytz
 redis
 loguru
 alpaca-trade-api
+boto3
+legacy-cgi
