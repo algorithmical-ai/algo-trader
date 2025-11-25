@@ -16,8 +16,11 @@ async def get_flow_signal(ticker: str, session: aiohttp.ClientSession):
     }
 
     try:
+        # Ensure all param values are strings or compatible with aiohttp
+        params_str = {k: str(v) for k, v in params.items()}
+        timeout = aiohttp.ClientTimeout(total=10)
         async with session.get(
-            url, headers=headers, params=params, timeout=aiohttp.ClientTimeout(total=10)
+            url, headers=headers, params=params_str, timeout=timeout
         ) as resp:
             if resp.status == 200:
                 data = await resp.json()
@@ -45,7 +48,10 @@ async def get_congress_trades(ticker: str, session: aiohttp.ClientSession):
     params = {"ticker": ticker, "limit": 10, "days": 7, "sort": "desc"}
 
     try:
-        async with session.get(url, headers=headers, params=params, timeout=10) as resp:
+        # Ensure all param values are strings or compatible with aiohttp
+        params_str = {k: str(v) for k, v in params.items()}
+        timeout = aiohttp.ClientTimeout(total=10)
+        async with session.get(url, headers=headers, params=params_str, timeout=timeout) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 for trade in data.get("data", []):
@@ -67,7 +73,10 @@ async def get_dark_pool(ticker: str, session: aiohttp.ClientSession):
     params = {"ticker": ticker, "limit": 5, "sort": "desc"}
 
     try:
-        async with session.get(url, headers=headers, params=params, timeout=10) as resp:
+        # Ensure params are str values for aiohttp compatibility
+        params_str = {k: str(v) for k, v in params.items()}
+        timeout = aiohttp.ClientTimeout(total=10)
+        async with session.get(url, headers=headers, params=params_str, timeout=timeout) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 total_vol = sum(float(d.get("volume", 0)) for d in data.get("data", []))
@@ -88,10 +97,15 @@ async def get_iv_rank(ticker: str, session: aiohttp.ClientSession):
     params = {"ticker": ticker}
 
     try:
-        async with session.get(url, headers=headers, params=params, timeout=10) as resp:
+        timeout = aiohttp.ClientTimeout(total=10)
+        async with session.get(url, headers=headers, params=params, timeout=timeout) as resp:
             if resp.status == 200:
                 data = await resp.json()
-                iv_rank = float(data.get("iv_rank", 0))
+                iv_str = data.get("iv_rank", "0")
+                try:
+                    iv_rank = float(iv_str) if iv_str not in ("N/A", None, "") else 0.0
+                except:
+                    iv_rank = 0.0
                 return iv_rank > 70  # High vol for day trades
             return False
     except Exception as e:
@@ -106,7 +120,13 @@ async def get_screener_tickers(session: aiohttp.ClientSession):
     params = {"filters": "high_volume,unusual_flow", "limit": 10, "days": 70}
 
     try:
-        async with session.get(url, headers=headers, params=params, timeout=10) as resp:
+        timeout = aiohttp.ClientTimeout(total=10)
+        async with session.get(
+            url,
+            headers=headers,
+            params={k: str(v) for k, v in params.items()},
+            timeout=timeout
+        ) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 return [d.get("ticker") for d in data.get("data", [])]
