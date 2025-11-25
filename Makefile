@@ -1,3 +1,5 @@
+export PYTHONPATH=$(PWD)/app
+
 .PHONY: setup test lint format clean
 
 YELLOW := \033[1;33m
@@ -13,16 +15,16 @@ setup:
 
 test:
 	@echo "$(YELLOW)Running tests...$(NC)"
-	conda run -n algo-trader pytest tests/ -v --cov=algo_trader --cov-report=html
-
-lint:
-	@echo "$(YELLOW)Running pylint...$(NC)"
-	conda run -n algo-trader pylint algo_trader/ tests/ --score=y
+	conda run -n algo-trader pytest app/tests/ -v --cov=algo_trader --cov-report=html
 
 format:
 	@echo "$(YELLOW)Formatting code...$(NC)"
-	conda run -n algo-trader black algo_trader/ tests/
-	conda run -n algo-trader isort algo_trader/ tests/
+	conda run -n algo-trader black algo_trader/ app/tests/
+	conda run -n algo-trader isort algo_trader/ app/tests/
+
+lint:
+	@echo "$(YELLOW)Running pylint...$(NC)"
+	conda run -n algo-trader pylint algo_trader/ app/tests/ --score=y
 
 clean:
 	@echo "$(YELLOW)Cleaning...$(NC)"
