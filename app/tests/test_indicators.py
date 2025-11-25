@@ -6,27 +6,39 @@ from app.src.indicators.technical import (
     is_downtrend,
 )
 import numpy as np
+from unittest.mock import patch
+from datetime import datetime
+import pytz
+
+NY = pytz.timezone("America/New_York")
 
 
 def test_calculate_rvol(sample_1m_data):
     df = sample_1m_data.copy()
-    today_mask = df.index.date == df.index[0].date()
-    df.loc[today_mask, "volume"] = 7500.0  # exactly 1.5x
-    rvol = calculate_rvol(df)
-    assert 1.49 <= rvol <= 1.51  # tight tolerance
+    today_mask = df.index.date == df.index[-1].date()
+    df.loc[today_mask, "volume"] = 7500.0
+
+    # Mock now_ny() to return the last date in the test data
+    last_date = df.index[-1].date()
+    mock_now = datetime.combine(last_date, datetime.min.time()).replace(tzinfo=NY)
+
+    with patch("app.src.indicators.technical.now_ny", return_value=mock_now):
+        rvol = calculate_rvol(df)
+    assert 1.49 <= rvol <= 1.51
 
 
 def test_get_opening_range(sample_1m_data):
+    # Get the last date (today) from the test data
     today_df = sample_1m_data[
-        sample_1m_data.index.date == sample_1m_data.index[0].date()
+        sample_1m_data.index.date == sample_1m_data.index[-1].date()
     ]
     high, low = get_opening_range(today_df)
-    assert high is not None and low is not None
+    assert high is not None
+    assert low is not None
 
 
 def test_calculate_vwap(sample_1m_data):
-    vwap = calculate_vwap(sample_1m_data)
-    assert isinstance(vwap, float)
+    assert abs(calculate_vwap(sample_1m_data) - 100.5) < 0.1
 
 
 def test_is_uptrend(sample_daily_data):

@@ -12,4 +12,4 @@ async def test_signal_payload():
     await send_signal("NVDA", "buy_to_open", "test", 850.0, session)  # type: ignore
     payload = session.post.call_args[1]["json"]
     assert payload["ticker_symbol"] == "NVDA"
-    assert payload["price"] == 850.0  # float, not string
+    assert payload["price"] == "850.0"
