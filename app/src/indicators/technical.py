@@ -11,20 +11,11 @@ def calculate_rvol(df_1m: pd.DataFrame) -> float:
     if len(df_1m) < 100:
         return 0.0
     today = now_ny().date()
-    today_mask = df_1m.index.date == today
-    today_vol = df_1m[today_mask]["volume"].sum()
-
-    # Calculate average volume per minute over the last 20 trading days, excluding today
-    historical_df = df_1m[~today_mask]
-    if len(historical_df) < 10:
-        return 0.0
-    avg_vol_per_min = (
-        historical_df["volume"].rolling(window=20 * 390, min_periods=10).mean().iloc[-1]
-    )
-    # Convert to average daily volume (390 minutes per trading day)
-    avg_daily_vol = avg_vol_per_min * 390
-    return today_vol / avg_daily_vol if avg_daily_vol > 0 else 0.0
-
+    today_vol = df_1m[df_1m.index.date == today]['volume'].sum()
+    # Fix: Daily agg for rolling mean
+    daily_vol = df_1m.groupby(df_1m.index.date)['volume'].sum()
+    avg_vol = daily_vol.rolling(20, min_periods=10).mean().iloc[-1]
+    return today_vol / avg_vol if avg_vol > 0 else 0.0
 
 def get_opening_range(df_today: pd.DataFrame) -> tuple[float, float]:
     if len(df_today) == 0:
