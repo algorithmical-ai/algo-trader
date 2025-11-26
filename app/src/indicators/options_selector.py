@@ -22,9 +22,14 @@ class WheelOptionsSelector:
             ).days
             if not (30 <= dte <= 45):
                 continue
-            delta = abs(float(c.get("delta", 0)))
-            if not (0.15 <= delta <= 0.30):
-                continue
+            delta_val = c.get("delta")
+            if delta_val is None:
+                # If delta not available, skip delta filtering but still consider the contract
+                delta = 0.20  # Use middle of range as default
+            else:
+                delta = abs(float(delta_val))
+                if not (0.15 <= delta <= 0.30):
+                    continue
             if strike >= spot_price:
                 continue
             distance = (spot_price - strike) / spot_price
@@ -58,9 +63,14 @@ class WheelOptionsSelector:
             ).days
             if not (21 <= dte <= 45):
                 continue
-            delta = float(c.get("delta", 0))
-            if not (0.25 <= delta <= 0.45):
-                continue
+            delta_val = c.get("delta")
+            if delta_val is None:
+                # If delta not available, skip delta filtering but still consider the contract
+                delta = 0.35  # Use middle of range as default
+            else:
+                delta = float(delta_val)
+                if not (0.25 <= delta <= 0.45):
+                    continue
             if strike <= spot_price:
                 continue
             premium = float(c["bid"])

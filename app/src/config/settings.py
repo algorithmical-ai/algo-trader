@@ -179,6 +179,9 @@ class Settings:
     TRADING_END = "15:55"
     ORB_PHASE_END = "10:30"
 
+    # Debug flag to force options strategies to run immediately (e.g., on laptop)
+    DEBUG_OPTION = os.getenv("DEBUG_OPTION", "false").lower() == "true"
+
 
 settings = Settings()
 

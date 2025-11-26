@@ -11,6 +11,7 @@ from app.src.data.unusual_whales import get_iv_rank, get_screener_tickers
 from app.src.indicators.options_selector import WheelOptionsSelector
 from app.src.position_tracker.wheel_tracker import WheelTracker
 from app.src.utils.helpers import now_ny
+from app.src.utils.logger import logger
 
 
 async def get_spot_price(ticker: str) -> float:
@@ -25,11 +26,35 @@ async def get_spot_price(ticker: str) -> float:
 
 
 async def run_weekly_put_wheel(session):
-    """Runs every Friday 3:55–4:10 PM ET — sells the best cash-secured puts"""
-    if now_ny().weekday() != 4 or not (
-        "15:55" <= now_ny().strftime("%H:%M") <= "16:10"
-    ):
-        return
+    """Runs every trading day 3:55–4:10 PM ET — sells the best cash-secured puts.
+
+    When settings.DEBUG_OPTION is True, ignores the day/time window and runs on
+    every loop (useful for local debugging).
+    """
+    now = now_ny()
+    if settings.DEBUG_OPTION:
+        logger.info(
+            "WheelMaster: DEBUG_OPTION enabled — running put wheel immediately "
+            "without schedule gating"
+        )
+    else:
+        # Only run on trading days (Mon–Fri). Weekends are skipped.
+        if now.weekday() > 4:
+            logger.info(
+                f"WheelMaster: skipping weekly put wheel — today is {now.strftime('%A')} "
+                "(runs only on trading days Mon–Fri)"
+            )
+            return
+
+        current_time_str = now.strftime("%H:%M")
+        if not ("15:55" <= current_time_str <= "16:10"):
+            logger.info(
+                "WheelMaster: skipping weekly put wheel — current time "
+                f"{current_time_str} ET, window is 15:55–16:10 ET"
+            )
+            return
+
+        logger.info("WheelMaster: running weekly put wheel scan")
 
     # Every Friday, use Unusual Whales screener + your golden list
     tickers = list(
@@ -43,7 +68,7 @@ async def run_weekly_put_wheel(session):
                 continue
 
             iv_rank_val = await get_iv_rank(ticker, session)
-            chain = await get_option_chain(ticker)  # ← You’ll plug real chain here
+            chain = await get_option_chain(ticker, option_type="put", session=session)
             if not chain:
                 continue
 
@@ -77,7 +102,7 @@ async def check_assignment_and_sell_call(session, alpaca_positions):
         qty = int(pos.qty)
         if qty > 0 and ticker in WheelTracker.get_open_puts():
             spot = float(pos.avg_entry_price)
-            chain = await get_option_chain(ticker)
+            chain = await get_option_chain(ticker, option_type="call", session=session)
             best_call = WheelOptionsSelector.select_best_call(chain, spot)
             if best_call is not None:
                 reason = f"Wheel Call | Assigned @ ${spot:.2f} → Selling call for ${best_call['premium']:.2f}"
