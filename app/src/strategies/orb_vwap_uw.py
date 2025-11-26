@@ -55,7 +55,7 @@ def _log_skip(ticker: str, reason: str, **context):
     if context:
         kv = ", ".join(f"{k}={v}" for k, v in context.items())
         extra = f" | {kv}"
-    logger.info(f"NO TRADE {ticker}: {reason}{extra}")
+    logger.debug(f"NO TRADE {ticker}: {reason}{extra}")
 
 
 async def evaluate_ticker(ticker: str, df_1m, df_daily, session):

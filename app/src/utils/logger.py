@@ -8,6 +8,7 @@ logger.remove()
 logger.add(
     sys.stdout,
     format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}:{function}:{line}</cyan> | <white>{message}</white>",
+    level="INFO",
 )
 logger.add(
     "logs/bot_{time:YYYY-MM-DD}.log",
