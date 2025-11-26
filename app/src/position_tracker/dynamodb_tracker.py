@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from functools import lru_cache
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 # Import legacy_cgi before boto3 to provide cgi module for Python 3.13+
 try:
@@ -22,6 +23,11 @@ from app.src.utils.logger import logger
 _OPEN_POSITIONS_TABLE = "AlgoTraderOpenPositions"
 _COMPLETED_TRADES_TABLE = "CompletedTradesForAlgoTrader"
 _INACTIVE_TICKERS_TABLE = "InactiveTickersForAlgoTrading"
+
+
+def _now_est() -> datetime:
+    """Return current time in US Eastern timezone."""
+    return datetime.now(ZoneInfo("America/New_York"))
 
 
 def _to_dynamodb_compatible(value):
@@ -78,7 +84,7 @@ class PositionTracker:
             return
 
         table = dynamodb.Table(_OPEN_POSITIONS_TABLE)
-        entry_timestamp = datetime.utcnow().isoformat()
+        entry_timestamp = _now_est().isoformat()
 
         try:
             table.put_item(
@@ -174,7 +180,7 @@ class PositionTracker:
                 pnl_pct = ((entry_price - exit_price) / entry_price) * 100
 
             # Build completed trade entry
-            exit_timestamp = datetime.utcnow().isoformat()
+            exit_timestamp = _now_est().isoformat()
             completed_trade = {
                 "ticker": ticker,
                 "action": entry_action,
@@ -187,8 +193,8 @@ class PositionTracker:
                 "profit_or_loss": str(profit_or_loss),
             }
 
-            # Get current date for partition key
-            date_key = datetime.utcnow().date().isoformat()
+            # Get current date for partition key (EST)
+            date_key = _now_est().date().isoformat()
 
             # Get existing completed trades data
             try:
@@ -335,7 +341,7 @@ class InactiveTickerTracker:
             return
 
         table = dynamodb.Table(_INACTIVE_TICKERS_TABLE)
-        last_updated = datetime.utcnow().isoformat()
+        last_updated = _now_est().isoformat()
 
         # Prepare indicators_values as a dict (DynamoDB supports maps)
         raw_indicators_dict = indicators_values if indicators_values is not None else {}
