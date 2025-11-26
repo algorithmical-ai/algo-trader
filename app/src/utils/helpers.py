@@ -1,8 +1,13 @@
 from datetime import datetime, time
-
+from typing import Callable, Any
+import functools
+import inspect
+from time import perf_counter
 import pytz
 
 from app.src.config.settings import settings
+from app.src.utils.logger import logger
+
 
 NY = pytz.timezone("America/New_York")
 
@@ -52,3 +57,81 @@ def get_dynamic_min_rvol() -> float:
     
     # Default fallback
     return 0.7
+
+
+
+def measure_latency(func: Callable) -> Callable:
+    """
+    Decorator to measure and log the execution latency of async functions.
+
+    Usage:
+        @measure_latency
+        async def my_function():
+            ...
+
+    Args:
+        func: The async function to measure
+
+    Returns:
+        Wrapped function that logs execution time
+    """
+    if not hasattr(func, "__name__"):
+        return func
+
+    @functools.wraps(func)
+    async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        start_time = perf_counter()
+        func_name = func.__name__
+        # Handle both classmethods (args[0] is a class) and instance methods (args[0] is an instance)
+        if args and hasattr(args[0], "__class__"):
+            if inspect.isclass(args[0]):
+                # For classmethods, args[0] is the class itself
+                class_name = args[0].__name__
+            else:
+                # For instance methods, args[0] is an instance
+                class_name = args[0].__class__.__name__
+        else:
+            class_name = ""
+        display_name = f"{class_name}.{func_name}" if class_name else func_name
+
+        try:
+            result = await func(*args, **kwargs)
+            elapsed_time = perf_counter() - start_time
+            logger.info(f"⏱️  {display_name} completed in {elapsed_time:.3f}s")
+            return result
+        except Exception as e:
+            elapsed_time = perf_counter() - start_time
+            logger.warning(f"⏱️  {display_name} failed after {elapsed_time:.3f}s: {str(e)}")
+            raise
+
+    @functools.wraps(func)
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+        start_time = perf_counter()
+        func_name = func.__name__
+        # Handle both classmethods (args[0] is a class) and instance methods (args[0] is an instance)
+        if args and hasattr(args[0], "__class__"):
+            if inspect.isclass(args[0]):
+                # For classmethods, args[0] is the class itself
+                class_name = args[0].__name__
+            else:
+                # For instance methods, args[0] is an instance
+                class_name = args[0].__class__.__name__
+        else:
+            class_name = ""
+        display_name = f"{class_name}.{func_name}" if class_name else func_name
+
+        try:
+            result = func(*args, **kwargs)
+            elapsed_time = perf_counter() - start_time
+            logger.info(f"⏱️  {display_name} completed in {elapsed_time:.3f}s")
+            return result
+        except Exception as e:
+            elapsed_time = perf_counter() - start_time
+            logger.warning(f"⏱️  {display_name} failed after {elapsed_time:.3f}s: {str(e)}")
+            raise
+
+    # Check if function is a coroutine function (async)
+    if hasattr(func, "__code__") and func.__code__.co_flags & 0x80:  # CO_COROUTINE flag
+        return async_wrapper
+    else:
+        return sync_wrapper

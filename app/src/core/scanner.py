@@ -6,12 +6,12 @@ from alpaca.trading.client import TradingClient
 from app.src.config.settings import settings
 from app.src.data.alpaca_client import get_bars
 from app.src.strategies.orb_vwap_uw import evaluate_ticker
-from app.src.utils.helpers import is_trading_hours
+from app.src.utils.helpers import is_trading_hours, measure_latency
 from app.src.utils.logger import logger
 
 trading_client = TradingClient(settings.ALPACA_KEY, settings.ALPACA_SECRET, paper=True)
 
-
+@measure_latency
 async def scan_once(session):
     clock = trading_client.get_clock()
     if not clock.is_open or not is_trading_hours():
@@ -53,4 +53,4 @@ async def scan_once(session):
 
     tasks = [evaluate_ticker(ticker, df_1m, df_daily, session) for ticker in active_symbols]
     await asyncio.gather(*tasks, return_exceptions=True)
-    logger.info("Scan complete")
+    logger.debug("Scan complete")
