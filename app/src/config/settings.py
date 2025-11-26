@@ -1,11 +1,17 @@
 import os
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
-from app.src.utils.helpers import now_ny
 from app.src.utils.logger import logger
 
 load_dotenv()
+
+
+def _now_ny() -> datetime:
+    """Return current New York time without importing helpers to avoid circular imports."""
+    return datetime.now(ZoneInfo("America/New_York"))
 
 
 class Settings:
@@ -158,7 +164,7 @@ class Settings:
     ]
 
     MIN_PRICE = 0.5
-    MIN_RVOL = 0.2 if now_ny().hour < 11 else 0.7  # Low in early, higher later
+    MIN_RVOL = 0.2 if _now_ny().hour < 11 else 0.7  # Low in early, higher later
     ORB_MINUTES = 15
     # Flow alert thresholds - more realistic for actual trading
     MIN_FLOW_PREMIUM = 50000  # $50k minimum premium for significant flow

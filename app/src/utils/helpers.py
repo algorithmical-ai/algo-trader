@@ -1,13 +1,12 @@
-from datetime import datetime, time
-from typing import Callable, Any
 import functools
 import inspect
+from datetime import datetime, time
 from time import perf_counter
+from typing import Any, Callable
+
 import pytz
 
-from app.src.config.settings import settings
 from app.src.utils.logger import logger
-
 
 NY = pytz.timezone("America/New_York")
 
@@ -16,10 +15,10 @@ def now_ny():
     return datetime.now(NY)
 
 
-def is_trading_hours():
+def is_trading_hours(trading_start: str, trading_end: str) -> bool:
     now = now_ny().time()
-    start = time.fromisoformat(settings.TRADING_START)
-    end = time.fromisoformat(settings.TRADING_END)
+    start = time.fromisoformat(trading_start)
+    end = time.fromisoformat(trading_end)
     return start <= now <= end
 
 

@@ -14,7 +14,9 @@ trading_client = TradingClient(settings.ALPACA_KEY, settings.ALPACA_SECRET, pape
 @measure_latency
 async def scan_once(session):
     clock = trading_client.get_clock()
-    if not clock.is_open or not is_trading_hours():
+    if not clock.is_open or not is_trading_hours(
+        settings.TRADING_START, settings.TRADING_END
+    ):
         logger.info("Skipping scan: Market closed or outside hours")
         return
 
