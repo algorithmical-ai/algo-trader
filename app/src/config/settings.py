@@ -157,7 +157,7 @@ class Settings:
     ]
 
     MIN_PRICE = 0.5
-    MIN_RVOL = 0.7
+    MIN_RVOL = 0.2 if now_ny().hour < 11 else 0.7  # Low in early, higher later
     ORB_MINUTES = 15
     # Flow alert thresholds - more realistic for actual trading
     MIN_FLOW_PREMIUM = 50000  # $50k minimum premium for significant flow
