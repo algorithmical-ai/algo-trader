@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from functools import lru_cache
 from typing import Optional
 
@@ -21,6 +22,24 @@ from app.src.utils.logger import logger
 _OPEN_POSITIONS_TABLE = "AlgoTraderOpenPositions"
 _COMPLETED_TRADES_TABLE = "CompletedTradesForAlgoTrader"
 _INACTIVE_TICKERS_TABLE = "InactiveTickersForAlgoTrading"
+
+
+def _to_dynamodb_compatible(value):
+    """
+    Recursively convert Python types into DynamoDB-compatible types.
+
+    In particular, convert all float instances into Decimal, including inside
+    nested dicts/lists, so that boto3's TypeSerializer accepts them.
+    """
+    if isinstance(value, float):
+        # Use string conversion to preserve precision expected by boto3
+        return Decimal(str(value))
+    if isinstance(value, dict):
+        return {k: _to_dynamodb_compatible(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_to_dynamodb_compatible(v) for v in value]
+    # For other types (str, int, bool, None, Decimal, etc.) just return as-is
+    return value
 
 
 @lru_cache(maxsize=1)
@@ -319,7 +338,8 @@ class InactiveTickerTracker:
         last_updated = datetime.utcnow().isoformat()
 
         # Prepare indicators_values as a dict (DynamoDB supports maps)
-        indicators_dict = indicators_values if indicators_values is not None else {}
+        raw_indicators_dict = indicators_values if indicators_values is not None else {}
+        indicators_dict = _to_dynamodb_compatible(raw_indicators_dict)
 
         try:
             table.put_item(
